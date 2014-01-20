@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Host</title>
+	<script src='era/era-debug.js'></script>
+  </head>
+  <script>
+
+Ui.Dialog.extend('Host.SendDialog', {
+	destinationField: undefined,
+	messageField: undefined,
+
+	constructor: function(config) {
+		this.setCancelButton(new Ui.Button({ text: 'Annuler' }));
+
+		var sendButton = new Ui.Button({ text: 'Envoyer' });
+		this.connect(sendButton, 'press', this.onSendPress);
+		this.setActionButtons([sendButton]);
+
+		var vbox = new Ui.VBox();
+		this.setContent(vbox);
+
+		vbox.append(new Ui.Label({ text: 'Destination:' }));
+
+		this.destinationField = new Ui.TextField({ width: 200 });
+		vbox.append(this.destinationField);
+
+		vbox.append(new Ui.Label({ text: 'Message:' }));
+
+		this.messageField = new Ui.TextAreaField({ width: 200, height: 200 });
+		vbox.append(this.messageField);
+	},
+
+	onSendPress: function() {
+		var request = new Core.HttpRequest({ method: 'POST', url: '/cloud/message?destination='+this.destinationField.getValue(), content: JSON.stringify({ content: this.messageField.getValue() }) });
+		this.connect(request, 'done', function(cmd) {
+			console.log('send done');
+			console.log(cmd.getResponseJSON());
+			this.close();
+		});
+		this.connect(request, 'error', function(cmd) {
+			console.log('send error');
+			this.close();
+		});
+		request.send();
+	}
+});
+
+Ui.Dialog.extend('Host.MonitorDialog', {
+	userField: undefined,
+	transitionBox: undefined,
+	content: undefined,
+	socket: undefined,
+	changeCounter: undefined,
+
+	constructor: function(config) {
+		this.setCancelButton(new Ui.Button({ text: 'Annuler' }));
+
+		this.transitionBox = new Ui.TransitionBox();
+		this.setContent(this.transitionBox);
+
+		this.content = new Ui.VBox();
+		this.userField = new Ui.TextField({ width: 200 });
+		this.content.append(new Ui.Label({ text: 'User: '}));
+		this.content.append(this.userField);
+
+		this.transitionBox.replaceContent(this.content);
+
+		var monitorButton = new Ui.Button({ text: 'Monitor' });
+		this.connect(monitorButton, 'press', this.onMonitorPress);
+		this.setActionButtons([monitorButton]);
+
+		this.connect(this, 'close', this.onClose);
+	},
+
+	onMonitorPress: function() {
+		this.changeCounter = new Ui.Label({ text: '0', margin: 5 });
+
+		this.content = new Ui.Grid({ cols: 'auto,auto', rows: 'auto' });
+
+		this.content.attach(new Ui.Label({ text: 'counter:', horizontalAlign: 'right', margin: 5 }), 0, 0);
+		this.content.attach(this.changeCounter, 1, 0);
+
+		this.transitionBox.replaceContent(this.content);
+
+		this.socket = new Core.Socket({ service: '/cloud/messagemonitor?user='+this.userField.getValue() });
+		this.connect(this.socket, 'message', this.onMessageReceived);
+		this.connect(this.socket, 'open', this.onSocketOpen);
+		this.connect(this.socket, 'error', this.onSocketError);
+		this.connect(this.socket, 'close', this.onSocketClose);
+
+		this.setActionButtons([]);
+	},
+
+	onSocketOpen: function(socket) {
+		console.log('onSocketOpen');
+	},
+
+	onSocketError: function(socket) {
+		console.log('onSocketError');
+	},
+
+	onSocketClose: function(socket) {
+		console.log('onSocketClose');
+	},
+
+	onMessageReceived: function(socket, msg) {
+		console.log('onMessageReceived');
+		console.log(msg);
+		this.changeCounter.setText(parseInt(this.changeCounter.getText()) + 1);
+	},
+
+	onClose: function() {
+		if(this.socket != undefined) {
+			this.socket.close();
+			this.socket = undefined;
+		}
+	}
+});
+
+Ui.App.extend('Host.App', {
+	constructor: function(config) {
+		var vbox = new Ui.VBox();
+		this.setContent(vbox);
+
+		var hbox = new Ui.HBox();
+		vbox.append(hbox);
+
+		var button = new Ui.Button({ text: 'send message' });
+		this.connect(button, 'press', this.onSendPress);
+		hbox.append(button);
+
+		var button = new Ui.Button({ text: 'monitor' });
+		this.connect(button, 'press', this.onMonitorPress);
+		hbox.append(button);
+	},
+
+	onSendPress: function() {
+		var dialog = new Host.SendDialog();
+		dialog.open();
+	},
+
+	onMonitorPress: function() {
+		var dialog = new Host.MonitorDialog();
+		dialog.open();
+	}
+});
+
+new Host.App();
+
+
+  </script>
+</html>

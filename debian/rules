@@ -1,0 +1,90 @@
+#!/usr/bin/make -f
+
+build: build-stamp
+build-stamp:
+	dh_testdir
+
+	mdtool build -c:Release
+	mkbundle --deps --static Webnapperon2/bin/Release/Webnapperon2.exe Webnapperon2/bin/Release/*.dll -o Webnapperon2/bin/Release/webnapperon2
+
+	touch $@
+
+clean:
+	dh_testdir
+	dh_testroot
+	rm -f build-stamp 
+
+	rm -Rf Webnapperon2/bin Webnapperon2/obj config.log
+	rm -Rf Migration/bin Migration/obj
+
+	dh_clean
+
+install: build
+	dh_testdir
+	dh_testroot
+	dh_prep
+	dh_installdirs
+
+	mkdir -p Webnapperon2/bin/Release/
+	# commands to install the package into debian/webnapperon2
+	mkdir -p debian/webnapperon2/usr/bin/
+	mkdir -p debian/webnapperon2/usr/lib/webnapperon2/
+	mkdir -p debian/webnapperon2/usr/share/
+	mkdir -p debian/webnapperon2/etc/default/
+	mkdir -p debian/webnapperon2/etc/init/
+	mkdir -p debian/webnapperon2/etc/logrotate.d/
+	mkdir -p debian/webnapperon2/etc/webnapperon2/
+	
+	cp debian/webnapperon2.default debian/webnapperon2/etc/default/webnapperon2
+	cp debian/webnapperon2.upstart debian/webnapperon2/etc/init/webnapperon2.conf
+	cp debian/webnapperon2.logrotate debian/webnapperon2/etc/logrotate.d/webnapperon2
+	cp Webnapperon2/webnapperon2.conf debian/webnapperon2/etc/webnapperon2/
+	
+	cp -RL share debian/webnapperon2/usr/share/webnapperon2
+	cp Webnapperon2/bin/Release/*.exe debian/webnapperon2/usr/lib/webnapperon2/
+	cp Webnapperon2/bin/Release/*.dll debian/webnapperon2/usr/lib/webnapperon2/
+	cp debian/webnapperon2.sh debian/webnapperon2/usr/bin/webnapperon2
+	
+	# commands to install the package into debian/webnapperon2-static
+	mkdir -p debian/webnapperon2-static/usr/bin/
+	mkdir -p debian/webnapperon2-static/usr/lib/webnapperon2/
+	mkdir -p debian/webnapperon2-static/usr/share/
+	mkdir -p debian/webnapperon2-static/etc/default/
+	mkdir -p debian/webnapperon2-static/etc/init/
+	mkdir -p debian/webnapperon2-static/etc/logrotate.d/
+	mkdir -p debian/webnapperon2-static/etc/webnapperon2/
+	
+	cp debian/webnapperon2.default debian/webnapperon2-static/etc/default/webnapperon2
+	cp debian/webnapperon2.upstart debian/webnapperon2-static/etc/init/webnapperon2.conf
+	cp debian/webnapperon2.logrotate debian/webnapperon2-static/etc/logrotate.d/webnapperon2
+	cp Webnapperon2/webnapperon2.conf debian/webnapperon2-static/etc/webnapperon2/
+		
+	cp -RL share debian/webnapperon2-static/usr/share/webnapperon2
+	cp /usr/lib/libMonoPosixHelper.so debian/webnapperon2-static/usr/lib/webnapperon2/
+	cp Webnapperon2/bin/Release/webnapperon2 debian/webnapperon2-static/usr/bin/
+
+# Build architecture-independent files here.
+binary-indep: build install
+	dh_testdir
+	dh_testroot
+#	dh_installchangelogs 
+#	dh_installdocs
+#	dh_installexamples
+	dh_install
+#	dh_installinit -n
+#	dh_installman
+#	dh_installcligac
+#	dh_link
+#	dh_strip
+#	dh_compress
+	dh_fixperms
+	dh_installdeb
+	dh_shlibdeps
+	dh_makeclilibs
+	dh_clideps -d
+	dh_gencontrol
+	dh_md5sums
+	dh_builddeb
+
+binary: binary-indep
+.PHONY: build clean binary-indep binary install 

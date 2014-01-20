@@ -1,0 +1,312 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ItemType>GenericProject</ItemType>
+    <ProductVersion>10.0.0</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{EA15FA9D-9ACF-4B67-ABCA-47CA6F84058D}</ProjectGuid>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <OutputPath>.</OutputPath>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <OutputPath>.</OutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <Folder Include="user\" />
+    <Folder Include="www\" />
+    <Folder Include="www\font\" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="user\default.png" />
+    <None Include="www\Makefile" />
+    <None Include="www\favicon.ico" />
+    <None Include="www\index.html" />
+    <None Include="www\app\texteditor\index.html" />
+    <None Include="www\era\era-debug.js" />
+    <None Include="www\era\era.js" />
+    <None Include="www\era\anim\animationmanager.js" />
+    <None Include="www\era\anim\bounceease.js" />
+    <None Include="www\era\anim\clock.js" />
+    <None Include="www\era\anim\clockgroup.js" />
+    <None Include="www\era\anim\easingfunction.js" />
+    <None Include="www\era\anim\elasticease.js" />
+    <None Include="www\era\anim\linearease.js" />
+    <None Include="www\era\anim\powerease.js" />
+    <None Include="www\era\anim\timemanager.js" />
+    <None Include="www\era\core\delayedtask.js" />
+    <None Include="www\era\core\dragevent.js" />
+    <None Include="www\era\core\event.js" />
+    <None Include="www\era\core\file.js" />
+    <None Include="www\era\core\filepostuploader.js" />
+    <None Include="www\era\core\fingerevent.js" />
+    <None Include="www\era\core\httprequest.js" />
+    <None Include="www\era\core\mouseevent.js" />
+    <None Include="www\era\core\object.js" />
+    <None Include="www\era\core\remotedebug.js" />
+    <None Include="www\era\core\socket.js" />
+    <None Include="www\era\core\timer.js" />
+    <None Include="www\era\core\uri.js" />
+    <None Include="www\era\core\util.js" />
+    <None Include="www\era\excanvas\AUTHORS" />
+    <None Include="www\era\excanvas\COPYING" />
+    <None Include="www\era\excanvas\README" />
+    <None Include="www\era\excanvas\excanvas.compiled.js" />
+    <None Include="www\era\excanvas\excanvas.js" />
+    <None Include="www\era\form\field.js" />
+    <None Include="www\era\form\fieldcontainer.js" />
+    <None Include="www\era\form\panel.js" />
+    <None Include="www\era\form\panelcontainer.js" />
+    <None Include="www\era\ui\accordeon.js" />
+    <None Include="www\era\ui\accordeonable.js" />
+    <None Include="www\era\ui\app.js" />
+    <None Include="www\era\ui\audio.js" />
+    <None Include="www\era\ui\box.js" />
+    <None Include="www\era\ui\button.js" />
+    <None Include="www\era\ui\buttongraphic.js" />
+    <None Include="www\era\ui\canvaselement.js" />
+    <None Include="www\era\ui\carousel.js" />
+    <None Include="www\era\ui\carouselable.js" />
+    <None Include="www\era\ui\checkbox.js" />
+    <None Include="www\era\ui\color.js" />
+    <None Include="www\era\ui\combo.js" />
+    <None Include="www\era\ui\compactlabel.js" />
+    <None Include="www\era\ui\container.js" />
+    <None Include="www\era\ui\contenteditable.js" />
+    <None Include="www\era\ui\datepicker.js" />
+    <None Include="www\era\ui\dialog.js" />
+    <None Include="www\era\ui\downloadbutton.js" />
+    <None Include="www\era\ui\draggable.js" />
+    <None Include="www\era\ui\dropbox.js" />
+    <None Include="www\era\ui\element.js" />
+    <None Include="www\era\ui\embed.js" />
+    <None Include="www\era\ui\entry.js" />
+    <None Include="www\era\ui\fade.js" />
+    <None Include="www\era\ui\fixed.js" />
+    <None Include="www\era\ui\flip.js" />
+    <None Include="www\era\ui\flow.js" />
+    <None Include="www\era\ui\fold.js" />
+    <None Include="www\era\ui\frame.js" />
+    <None Include="www\era\ui\grid.js" />
+    <None Include="www\era\ui\html.js" />
+    <None Include="www\era\ui\icon.js" />
+    <None Include="www\era\ui\iconlist.js" />
+    <None Include="www\era\ui\iframe.js" />
+    <None Include="www\era\ui\image.js" />
+    <None Include="www\era\ui\keyboard.js" />
+    <None Include="www\era\ui\label.js" />
+    <None Include="www\era\ui\lbox.js" />
+    <None Include="www\era\ui\lineargradient.js" />
+    <None Include="www\era\ui\linkable.js" />
+    <None Include="www\era\ui\linkbutton.js" />
+    <None Include="www\era\ui\listview.js" />
+    <None Include="www\era\ui\loading.js" />
+    <None Include="www\era\ui\locator.js" />
+    <None Include="www\era\ui\matrix.js" />
+    <None Include="www\era\ui\menu.js" />
+    <None Include="www\era\ui\monthcalendar.js" />
+    <None Include="www\era\ui\mouseoverable.js" />
+    <None Include="www\era\ui\movable.js" />
+    <None Include="www\era\ui\notebook.js" />
+    <None Include="www\era\ui\paned.js" />
+    <None Include="www\era\ui\point.js" />
+    <None Include="www\era\ui\popup.js" />
+    <None Include="www\era\ui\pressable.js" />
+    <None Include="www\era\ui\program.js" />
+    <None Include="www\era\ui\progressbar.js" />
+    <None Include="www\era\ui\rectangle.js" />
+    <None Include="www\era\ui\scrollable.js" />
+    <None Include="www\era\ui\scrollingarea.js" />
+    <None Include="www\era\ui\segmentbar.js" />
+    <None Include="www\era\ui\selectable.js" />
+    <None Include="www\era\ui\separator.js" />
+    <None Include="www\era\ui\shadow.js" />
+    <None Include="www\era\ui\shape.js" />
+    <None Include="www\era\ui\slide.js" />
+    <None Include="www\era\ui\slider.js" />
+    <None Include="www\era\ui\spacer.js" />
+    <None Include="www\era\ui\styles.js" />
+    <None Include="www\era\ui\svgelement.js" />
+    <None Include="www\era\ui\svgparser.js" />
+    <None Include="www\era\ui\switch.js" />
+    <None Include="www\era\ui\text.js" />
+    <None Include="www\era\ui\textarea.js" />
+    <None Include="www\era\ui\textareafield.js" />
+    <None Include="www\era\ui\textbuttonfield.js" />
+    <None Include="www\era\ui\textfield.js" />
+    <None Include="www\era\ui\togglable.js" />
+    <None Include="www\era\ui\togglebutton.js" />
+    <None Include="www\era\ui\toolbar.js" />
+    <None Include="www\era\ui\transformable.js" />
+    <None Include="www\era\ui\transition.js" />
+    <None Include="www\era\ui\transitionbox.js" />
+    <None Include="www\era\ui\uploadable.js" />
+    <None Include="www\era\ui\uploadbutton.js" />
+    <None Include="www\era\ui\video.js" />
+    <None Include="www\era\ui\virtualkeyboard.js" />
+    <None Include="www\wn\wn-debug.js" />
+    <None Include="www\wn\wn.js" />
+    <None Include="www\wn\calendar\app.js" />
+    <None Include="www\wn\calendar\creator.js" />
+    <None Include="www\wn\calendar\preview.js" />
+    <None Include="www\wn\calendar\wizard.js" />
+    <None Include="www\wn\wn\addcontactdialog.js" />
+    <None Include="www\wn\wn\addcontacticon.js" />
+    <None Include="www\wn\wn\addcontactrightdialog.js" />
+    <None Include="www\wn\wn\addworldicon.js" />
+    <None Include="www\wn\wn\audioplayer.js" />
+    <None Include="www\wn\wn\commentviewer.js" />
+    <None Include="www\wn\wn\contact.js" />
+    <None Include="www\wn\wn\contactmessagesdialog.js" />
+    <None Include="www\wn\wn\contactview.js" />
+    <None Include="www\wn\wn\croppedimage.js" />
+    <None Include="www\wn\wn\dualicon.js" />
+    <None Include="www\wn\wn\groupiconview.js" />
+    <None Include="www\wn\wn\logincreator.js" />
+    <None Include="www\wn\wn\loginwizard.js" />
+    <None Include="www\wn\wn\mediaslider.js" />
+    <None Include="www\wn\wn\menuswitch.js" />
+    <None Include="www\wn\wn\message.js" />
+    <None Include="www\wn\wn\messageview.js" />
+    <None Include="www\wn\wn\preview.js" />
+    <None Include="www\wn\wn\progressbar.js" />
+    <None Include="www\wn\wn\resource.js" />
+    <None Include="www\wn\wn\resourcecreator.js" />
+    <None Include="www\wn\wn\resourcenew.js" />
+    <None Include="www\wn\wn\resourceview.js" />
+    <None Include="www\wn\wn\resourceviewer.js" />
+    <None Include="www\wn\wn\resourcewizard.js" />
+    <None Include="www\wn\wn\scaledimage.js" />
+    <None Include="www\wn\wn\user.js" />
+    <None Include="www\wn\wn\userprofil.js" />
+    <None Include="www\wn\wn\userview.js" />
+    <None Include="www\wn\wn\videoplayer.js" />
+    <None Include="www\wn\wn\viewer.js" />
+    <None Include="www\wn\wn\wizarditem.js" />
+    <None Include="www\wn\logins\create\wizard.js" />
+    <None Include="www\wn\logins\facebook\wizard.js" />
+    <None Include="www\wn\logins\google\wizard.js" />
+    <None Include="www\wn\logins\local\wizard.js" />
+    <None Include="www\wn\news\app.js" />
+    <None Include="www\wn\news\creator.js" />
+    <None Include="www\wn\news\preview.js" />
+    <None Include="www\wn\news\wizard.js" />
+    <None Include="www\wn\picasa\app.js" />
+    <None Include="www\wn\picasa\creator.js" />
+    <None Include="www\wn\picasa\preview.js" />
+    <None Include="www\wn\picasa\wizard.js" />
+    <None Include="www\wn\podcast\app.js" />
+    <None Include="www\wn\podcast\creator.js" />
+    <None Include="www\wn\podcast\preview.js" />
+    <None Include="www\wn\podcast\wizard.js" />
+    <None Include="www\wn\radio\app.js" />
+    <None Include="www\wn\radio\creator.js" />
+    <None Include="www\wn\radio\preview.js" />
+    <None Include="www\wn\radio\wizard.js" />
+    <None Include="www\wn\storage\creator.js" />
+    <None Include="www\wn\storage\directory.js" />
+    <None Include="www\wn\storage\file.js" />
+    <None Include="www\wn\storage\filepreview.js" />
+    <None Include="www\wn\storage\fileviewer.js" />
+    <None Include="www\wn\storage\preview.js" />
+    <None Include="www\wn\storage\viewer.js" />
+    <None Include="www\wn\storage\wizard.js" />
+    <None Include="www\wn\weather\app.js" />
+    <None Include="www\wn\weather\creator.js" />
+    <None Include="www\img\apple-icon-114x114.png" />
+    <None Include="www\img\apple-icon-72x72.png" />
+    <None Include="www\tests\comments.html" />
+    <None Include="www\tests\googleauth.html" />
+    <None Include="www\tests\googlehost.html" />
+    <None Include="www\tests\user.html" />
+    <None Include="www\tests\index.html" />
+    <None Include="www\tests\message.html" />
+    <None Include="www\tests\progressbar.html" />
+    <None Include="www\tests\storage.html" />
+    <None Include="www\tests\storage2.html" />
+    <None Include="www\tests\testpost.html" />
+    <None Include="Makefile" />
+    <None Include="www\wn\main.js" />
+    <None Include="www\index-debug.html" />
+    <None Include="www\app\texteditor\main.js" />
+    <None Include="www\app\texteditor\index-debug.html" />
+    <None Include="www\wn\wn\improvedtext.js" />
+    <None Include="www\wn\wn\flowdropbox.js" />
+    <None Include="www\wn\wn\vdropbox.js" />
+    <None Include="www\wn\wn\hdropbox.js" />
+    <None Include="www\wn\wn\userstatsdialog.js" />
+    <None Include="www\wn\wn\resourceviewgraphic.js" />
+    <None Include="www\wn\wn\appviewgraphic.js" />
+    <None Include="www\wn\wn\carousel.js" />
+    <None Include="www\era\ui\textbggraphic.js" />
+    <None Include="www\era\ui\movablebase.js" />
+    <None Include="www\era\ui\checkboxgraphic.js" />
+    <None Include="www\wn\wn\contentbggraphic.js" />
+    <None Include="www\wn\wn\scaledimage2.js" />
+    <None Include="www\era\form\dialog.js" />
+    <None Include="www\wn\wn\optionsection.js" />
+    <None Include="www\wn\wn\rfid.js" />
+    <None Include="www\wn\wn\resourcepropertiesdialog.js" />
+    <None Include="www\wn\wn\rfidsection.js" />
+    <None Include="www\wn\wn\webaccountsection.js" />
+    <None Include="www\era\ui\selection.js" />
+    <None Include="www\era\ui\selectionable.js" />
+    <None Include="www\wn\wn\readersection.js" />
+    <None Include="www\wn\wn\devicesection.js" />
+    <None Include="www\wn\wn\resourcesharessection.js" />
+    <None Include="www\wn\storage\filepropertiesdialog.js" />
+    <None Include="www\wn\wn\queue.js" />
+    <None Include="www\wn\wn\rfidreader.js" />
+    <None Include="www\font\Ubuntu-B.ttf" />
+    <None Include="www\font\Ubuntu-BI.ttf" />
+    <None Include="www\font\ubuntu-b-webfont.eot" />
+    <None Include="www\font\ubuntu-b-webfont.ttf" />
+    <None Include="www\font\ubuntu-b-webfont.woff" />
+    <None Include="www\font\Ubuntu-C.ttf" />
+    <None Include="www\font\Ubuntu-L.ttf" />
+    <None Include="www\font\Ubuntu-LI.ttf" />
+    <None Include="www\font\ubuntu-l-webfont.eot" />
+    <None Include="www\font\ubuntu-l-webfont.ttf" />
+    <None Include="www\font\ubuntu-l-webfont.woff" />
+    <None Include="www\font\Ubuntu-M.ttf" />
+    <None Include="www\font\Ubuntu-MI.ttf" />
+    <None Include="www\font\UbuntuMono-B.ttf" />
+    <None Include="www\font\UbuntuMono-BI.ttf" />
+    <None Include="www\font\UbuntuMono-R.ttf" />
+    <None Include="www\font\UbuntuMono-RI.ttf" />
+    <None Include="www\font\Ubuntu-R.ttf" />
+    <None Include="www\font\Ubuntu-RI.ttf" />
+    <None Include="www\font\ubuntu-r-webfont.eot" />
+    <None Include="www\font\ubuntu-r-webfont.ttf" />
+    <None Include="www\font\ubuntu-r-webfont.woff" />
+    <None Include="www\era\ui\sflow.js" />
+    <None Include="www\wn\wn\historymessagesdialog.js" />
+    <None Include="www\wn\wn\newribbon.js" />
+    <None Include="www\era\ui\contextbar.js" />
+    <None Include="www\era\core\rtc.js" />
+    <None Include="www\era\core\media.js" />
+    <None Include="www\wn\wn\videoconfdialog.js" />
+    <None Include="www\tests\toolbar.html" />
+    <None Include="www\era\ui\menutoolbar.js" />
+    <None Include="www\wn\wn\userface.js" />
+    <None Include="www\era\Makefile" />
+    <None Include="www\wn\Makefile" />
+  </ItemGroup>
+  <ProjectExtensions>
+    <MonoDevelop>
+      <Properties>
+        <MonoDevelop.Autotools.MakefileInfo IntegrationEnabled="True" RelativeMakefileName="Makefile">
+          <BuildFilesVar />
+          <DeployFilesVar />
+          <ResourcesVar />
+          <OthersVar />
+          <GacRefVar />
+          <AsmRefVar />
+          <ProjectRefVar />
+        </MonoDevelop.Autotools.MakefileInfo>
+      </Properties>
+    </MonoDevelop>
+  </ProjectExtensions>
+</Project>

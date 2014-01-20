@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Host</title>
+	<script src='era/era-debug.js'></script>
+  </head>
+  <script>
+
+Ui.App.extend('Host.App', {
+	socket: undefined,
+
+	constructor: function(config) {
+		var vbox = new Ui.VBox();
+		this.setContent(vbox);
+
+		var hbox = new Ui.HBox();
+		vbox.append(hbox);
+
+		var button = new Ui.Button({ text: 'test' });
+		this.connect(button, 'press', this.onTestPress);
+		hbox.append(button);
+	},
+
+	onTestPress: function() {
+		var request = new Core.HttpRequest({ method: 'POST', url: '/cloud/storage?cmd=createdir&storage=1',
+			content: JSON.stringify({ name: 'Fun' }) 
+		});
+		this.connect(request, 'done', function(cmd) {
+			console.log(cmd.getResponseJSON());
+		});
+		request.send();
+	}
+});
+
+new Host.App();
+
+
+  </script>
+</html>

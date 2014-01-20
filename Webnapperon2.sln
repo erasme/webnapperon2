@@ -1,0 +1,70 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Webnapperon2", "Webnapperon2\Webnapperon2.csproj", "{D46AE805-4BFB-47F6-9278-09CA3497B801}"
+EndProject
+Project("{9344BDBB-3E7F-41FC-A0DD-8665D75EE146}") = "debian", "debian\debian.mdproj", "{27A0CB60-2B22-406E-BCC7-2F0A86DB575E}"
+EndProject
+Project("{9344BDBB-3E7F-41FC-A0DD-8665D75EE146}") = "share", "share\share.mdproj", "{EA15FA9D-9ACF-4B67-ABCA-47CA6F84058D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Migration", "Migration\Migration.csproj", "{B42F431A-6106-4F04-BBF2-AFD9253C7432}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{27A0CB60-2B22-406E-BCC7-2F0A86DB575E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{27A0CB60-2B22-406E-BCC7-2F0A86DB575E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{27A0CB60-2B22-406E-BCC7-2F0A86DB575E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{27A0CB60-2B22-406E-BCC7-2F0A86DB575E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B42F431A-6106-4F04-BBF2-AFD9253C7432}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B42F431A-6106-4F04-BBF2-AFD9253C7432}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D46AE805-4BFB-47F6-9278-09CA3497B801}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D46AE805-4BFB-47F6-9278-09CA3497B801}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D46AE805-4BFB-47F6-9278-09CA3497B801}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D46AE805-4BFB-47F6-9278-09CA3497B801}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EA15FA9D-9ACF-4B67-ABCA-47CA6F84058D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EA15FA9D-9ACF-4B67-ABCA-47CA6F84058D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EA15FA9D-9ACF-4B67-ABCA-47CA6F84058D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EA15FA9D-9ACF-4B67-ABCA-47CA6F84058D}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(MonoDevelopProperties) = preSolution
+		StartupItem = Webnapperon2\Webnapperon2.csproj
+		Policies = $0
+		$0.DotNetNamingPolicy = $1
+		$1.DirectoryNamespaceAssociation = None
+		$1.ResourceNamePolicy = FileFormatDefault
+		$0.TextStylePolicy = $2
+		$2.TabsToSpaces = False
+		$2.inheritsSet = VisualStudio
+		$2.inheritsScope = text/plain
+		$2.scope = text/x-csharp
+		$0.CSharpFormattingPolicy = $3
+		$3.ElseNewLinePlacement = NewLine
+		$3.CatchNewLinePlacement = NewLine
+		$3.BeforeMethodDeclarationParentheses = False
+		$3.BeforeMethodCallParentheses = False
+		$3.BeforeConstructorDeclarationParentheses = False
+		$3.BeforeIndexerDeclarationBracket = False
+		$3.BeforeDelegateDeclarationParentheses = False
+		$3.NewParentheses = False
+		$3.IfParentheses = False
+		$3.WhileParentheses = False
+		$3.ForParentheses = False
+		$3.ForeachParentheses = False
+		$3.CatchParentheses = False
+		$3.SwitchParentheses = False
+		$3.LockParentheses = False
+		$3.UsingParentheses = False
+		$3.ConditionalOperatorBeforeConditionSpace = False
+		$3.ConditionalOperatorAfterConditionSpace = False
+		$3.ConditionalOperatorBeforeSeparatorSpace = False
+		$3.ConditionalOperatorAfterSeparatorSpace = False
+		$3.SpacesBeforeBrackets = False
+		$3.inheritsSet = Mono
+		$3.inheritsScope = text/x-csharp
+		$3.scope = text/x-csharp
+	EndGlobalSection
+EndGlobal

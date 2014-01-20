@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Host</title>
+	<script src='era/era-debug.js'></script>
+  </head>
+  <script>
+
+Ui.Dialog.extend('Host.ModifyDialog', {
+	idField: undefined,
+	quotaField: undefined,
+
+	constructor: function(config) {
+		this.setCancelButton(new Ui.Button({ text: 'Annuler' }));
+
+		var modifyButton = new Ui.Button({ text: 'Modifier' });
+		this.connect(modifyButton, 'press', this.onModifyPress);
+		this.setActionButtons([modifyButton]);
+
+		var vbox = new Ui.VBox();
+		this.setContent(vbox);
+
+		vbox.append(new Ui.Label({ text: 'Id' }));
+
+		this.idField = new Ui.TextField({ width: 200 });
+		vbox.append(this.idField);
+
+		vbox.append(new Ui.Label({ text: 'Quota' }));
+
+		this.quotaField = new Ui.TextField({ width: 200 });
+		vbox.append(this.quotaField);
+	},
+
+	onModifyPress: function() {
+		var request = new Core.HttpRequest({ method: 'PUT', url: '/cloud/storage',
+			arguments: { cmd: 'change', storage: this.idField.getValue() },
+			content: JSON.stringify({ quota: this.quotaField.getValue() }) });
+		this.connect(request, 'done', function(cmd) {
+			console.log('modify done');
+			console.log(cmd.getResponseJSON());
+			this.close();
+		});
+		this.connect(request, 'error', function(cmd) {
+			console.log('modify error');
+			this.close();
+		});
+		request.send();
+	}
+});
+
+Ui.Dialog.extend('Host.DeleteDialog', {
+	idField: undefined,
+
+	constructor: function(config) {
+		this.setCancelButton(new Ui.Button({ text: 'Annuler' }));
+
+		var removeButton = new Ui.Button({ text: 'Supprimer' });
+		this.connect(removeButton, 'press', this.onRemovePress);
+		this.setActionButtons([removeButton]);
+
+		this.idField = new Ui.TextField({ width: 200 });
+		this.setContent(this.idField);
+	},
+
+	onRemovePress: function() {
+		var request = new Core.HttpRequest({ method: 'DELETE', url: '/cloud/storage', arguments: { cmd: 'delete', storage: this.idField.getValue() } });
+		this.connect(request, 'done', function(cmd) {
+			console.log('remove done');
+			console.log(cmd.getResponseJSON());
+			this.close();
+		});
+		this.connect(request, 'error', function(cmd) {
+			console.log('remove error');
+			this.close();
+		});
+		request.send();
+	}
+});
+
+Ui.Dialog.extend('Host.CreateDirDialog', {
+	idField: undefined,
+	parentField: undefined,
+	nameField: undefined,
+
+	constructor: function(config) {
+		this.setCancelButton(new Ui.Button({ text: 'Annuler' }));
+
+		var createButton = new Ui.Button({ text: 'Créer' });
+		this.connect(createButton, 'press', this.onCreatePress);
+		this.setActionButtons([createButton]);
+
+		this.idField = new Ui.TextField({ width: 200 });
+		this.parentField = new Ui.TextField({ width: 200 });
+		this.nameField = new Ui.TextField({ width: 200 });
+
+		var vbox = new Ui.VBox();
+		vbox.append(new Ui.Label({ text: 'Storage: '}));
+		vbox.append(this.idField);
+		vbox.append(new Ui.Label({ text: 'Parent: '}));
+		vbox.append(this.parentField);
+		vbox.append(new Ui.Label({ text: 'Name: '}));
+		vbox.append(this.nameField);
+
+		this.setContent(vbox);
+	},
+
+	onCreatePress: function() {
+		var request = new Core.HttpRequest({ method: 'POST', url: '/cloud/storage',
+			arguments: { cmd: 'createfile', storage: this.idField.getValue(), parent: this.parentField.getValue() },
+			content: JSON.stringify({ mimetype: 'application/x-directory', name: this.nameField.getValue() }) });
+		this.connect(request, 'done', function(cmd) {
+			console.log('create done');
+			console.log(cmd.getResponseJSON());
+			this.close();
+		});
+		this.connect(request, 'error', function(cmd) {
+			console.log('create error');
+			this.close();
+		});
+		request.send();
+	}
+});
+
+Ui.Dialog.extend('Host.DeleteFileDialog', {
+	idField: undefined,
+	fileField: undefined,
+
+	constructor: function(config) {
+		this.setCancelButton(new Ui.Button({ text: 'Annuler' }));
+
+		var removeButton = new Ui.Button({ text: 'Effacer' });
+		this.connect(removeButton, 'press', this.onRemovePress);
+		this.setActionButtons([removeButton]);
+
+		this.idField = new Ui.TextField({ width: 200 });
+		this.fileField = new Ui.TextField({ width: 200 });
+
+		var vbox = new Ui.VBox();
+		vbox.append(new Ui.Label({ text: 'Storage: '}));
+		vbox.append(this.idField);
+		vbox.append(new Ui.Label({ text: 'File: '}));
+		vbox.append(this.fileField);
+
+		this.setContent(vbox);
+	},
+
+	onRemovePress: function() {
+		var request = new Core.HttpRequest({ method: 'DELETE', url: '/cloud/storage',
+			arguments: { cmd: 'deletefile', storage: this.idField.getValue(), file: this.fileField.getValue() } });
+		this.connect(request, 'done', function(cmd) {
+			console.log('remove done');
+			console.log(cmd.getResponseJSON());
+			this.close();
+		});
+		this.connect(request, 'error', function(cmd) {
+			console.log('remove error');
+			this.close();
+		});
+		request.send();
+	}
+});
+
+
+Ui.Dialog.extend('Host.UploadFileDialog', {
+	idField: undefined,
+	parentField: undefined,
+
+	constructor: function(config) {
+		this.setCancelButton(new Ui.Button({ text: 'Annuler' }));
+
+		this.idField = new Ui.TextField({ width: 200 });
+		this.parentField = new Ui.TextField({ width: 200 });
+
+		var vbox = new Ui.VBox();
+		vbox.append(new Ui.Label({ text: 'Storage: '}));
+		vbox.append(this.idField);
+
+		vbox.append(new Ui.Label({ text: 'Parent: '}));
+		vbox.append(this.parentField);
+
+		var uploadButton = new Ui.UploadButton({ icon: 'upload', text: 'Upload', orientation: 'horizontal' });
+		vbox.append(uploadButton);
+		this.connect(uploadButton, 'file', this.onUploadFile);
+		this.setActionButtons([uploadButton]);
+
+		this.setContent(vbox);
+	},
+
+	onUploadFile: function(button, file) {
+		var uploader = new Core.FilePostUploader({ file: file, service: '/cloud/storage?storage='+this.idField.getValue()+'&cmd=createfile&parent='+this.parentField.getValue() });
+		this.connect(uploader, 'complete', this.onUploadComplete);
+		uploader.send();
+	},
+
+	onUploadComplete: function() {
+		this.close();
+	}
+});
+
+
+Ui.Dialog.extend('Host.UpdateFileDialog', {
+	storageField: undefined,
+	fileField: undefined,
+
+	constructor: function(config) {
+		this.setCancelButton(new Ui.Button({ text: 'Annuler' }));
+
+		this.storageField = new Ui.TextField({ width: 200 });
+		this.fileField = new Ui.TextField({ width: 200 });
+
+		var vbox = new Ui.VBox();
+		vbox.append(new Ui.Label({ text: 'Storage: '}));
+		vbox.append(this.storageField);
+
+		vbox.append(new Ui.Label({ text: 'File: '}));
+		vbox.append(this.fileField);
+
+		var uploadButton = new Ui.UploadButton({ icon: 'upload', text: 'Update', orientation: 'horizontal' });
+		vbox.append(uploadButton);
+		this.connect(uploadButton, 'file', this.onUploadFile);
+		this.setActionButtons([uploadButton]);
+
+		this.setContent(vbox);
+	},
+
+	onUploadFile: function(button, file) {
+		var uploader = new Core.FilePostUploader({ method: 'PUT', file: file, service: '/cloud/storage?storage='+this.storageField.getValue()+'&cmd=changefile&file='+this.fileField.getValue() });
+		this.connect(uploader, 'complete', this.onUploadComplete);
+		uploader.send();
+	},
+
+	onUploadComplete: function() {
+		this.close();
+	}
+});
+
+
+Ui.Dialog.extend('Host.MonitorDialog', {
+	storageField: undefined,
+	transitionBox: undefined,
+	content: undefined,
+	socket: undefined,
+	changeCounter: undefined,
+	revLabel: undefined,
+
+	constructor: function(config) {
+		this.setCancelButton(new Ui.Button({ text: 'Annuler' }));
+
+		this.transitionBox = new Ui.TransitionBox();
+		this.setContent(this.transitionBox);
+
+		this.content = new Ui.VBox();
+		this.storageField = new Ui.TextField({ width: 200 });
+		this.content.append(new Ui.Label({ text: 'Storage: '}));
+		this.content.append(this.storageField);
+
+		this.transitionBox.replaceContent(this.content);
+
+		var monitorButton = new Ui.Button({ text: 'Monitor' });
+		this.connect(monitorButton, 'press', this.onMonitorPress);
+		this.setActionButtons([monitorButton]);
+
+		this.connect(this, 'close', this.onClose);
+	},
+
+	onMonitorPress: function() {
+		this.changeCounter = new Ui.Label({ text: '0', margin: 5 });
+		this.revLabel = new Ui.Label({ margin: 5 });
+
+		this.content = new Ui.Grid({ cols: 'auto,auto', rows: 'auto,auto' });
+
+		this.content.attach(new Ui.Label({ text: 'counter:', horizontalAlign: 'right', margin: 5 }), 0, 0);
+		this.content.attach(this.changeCounter, 1, 0);
+		this.content.attach(new Ui.Label({ text: 'rev:', horizontalAlign: 'right', margin: 5 }), 0, 1);
+		this.content.attach(this.revLabel, 1, 1);
+
+		this.transitionBox.replaceContent(this.content);
+
+		this.socket = new Core.Socket({ service: '/cloud/storagemonitor?storage='+this.storageField.getValue() });
+		this.connect(this.socket, 'message', this.onMessageReceived);
+		this.connect(this.socket, 'open', this.onSocketOpen);
+		this.connect(this.socket, 'error', this.onSocketError);
+		this.connect(this.socket, 'close', this.onSocketClose);
+
+		this.setActionButtons([]);
+	},
+
+	onSocketOpen: function(socket) {
+		console.log('onSocketOpen');
+	},
+
+	onSocketError: function(socket) {
+		console.log('onSocketError');
+	},
+
+	onSocketClose: function(socket) {
+		console.log('onSocketClose');
+	},
+
+	onMessageReceived: function(socket, msg) {
+		console.log('onMessageReceived');
+		console.log(msg);
+		this.changeCounter.setText(parseInt(this.changeCounter.getText()) + 1);
+		this.revLabel.setText(''+msg.rev);
+	},
+
+	onClose: function() {
+		if(this.socket != undefined) {
+			this.socket.close();
+			this.socket = undefined;
+		}
+	}
+});
+
+Ui.App.extend('Host.App', {
+	socket: undefined,
+
+	constructor: function(config) {
+		var vbox = new Ui.VBox();
+		this.setContent(vbox);
+
+		var flow = new Ui.Flow({ uniform: true });
+		vbox.append(flow);
+
+		var button = new Ui.Button({ text: 'create storage' });
+		this.connect(button, 'press', this.onCreatePress);
+		flow.append(button);
+
+		var button = new Ui.Button({ text: 'delete storage' });
+		this.connect(button, 'press', this.onDeletePress);
+		flow.append(button);
+
+		var button = new Ui.Button({ text: 'modify storage' });
+		this.connect(button, 'press', this.onStorageModifyPress);
+		flow.append(button);
+
+		var button = new Ui.Button({ text: 'create dir' });
+		this.connect(button, 'press', this.onCreateDirPress);
+		flow.append(button);
+
+		var button = new Ui.Button({ text: 'delete file' });
+		this.connect(button, 'press', this.onDeleteFilePress);
+		flow.append(button);
+
+		var button = new Ui.Button({ text: 'upload file' });
+		this.connect(button, 'press', this.onUploadFilePress);
+		flow.append(button);
+
+		var button = new Ui.Button({ text: 'update file' });
+		this.connect(button, 'press', this.onUpdateFilePress);
+		flow.append(button);
+
+		var button = new Ui.Button({ text: 'monitor storage' });
+		this.connect(button, 'press', this.onMonitorStoragePress);
+		flow.append(button);
+	},
+
+	onCreatePress: function() {
+		var request = new Core.HttpRequest({ method: 'POST', url: '/cloud/storage',
+			arguments: { cmd: 'create' }, content: JSON.stringify({ quota: 20000 }) });
+		this.connect(request, 'done', function(cmd) {
+			console.log(cmd.getResponseJSON());
+		});
+		request.send();
+	},
+
+	onDeletePress: function() {
+		var dialog = new Host.DeleteDialog();
+		dialog.open();
+	},
+
+	onStorageModifyPress: function() {
+		var dialog = new Host.ModifyDialog();
+		dialog.open();		
+	},
+
+	onCreateDirPress: function() {
+		var dialog = new Host.CreateDirDialog();
+		dialog.open();
+	},
+
+	onDeleteFilePress: function() {
+		var dialog = new Host.DeleteFileDialog();
+		dialog.open();
+	},
+
+	onUploadFilePress: function() {
+		var dialog = new Host.UploadFileDialog();
+		dialog.open();
+	},
+
+	onUpdateFilePress: function() {
+		var dialog = new Host.UpdateFileDialog();
+		dialog.open();
+	},
+
+	onMonitorStoragePress: function() {
+		var dialog = new Host.MonitorDialog();
+		dialog.open();
+	}
+});
+
+new Host.App();
+
+
+  </script>
+</html>

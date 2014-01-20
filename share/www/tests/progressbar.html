@@ -1,0 +1,39 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<script src='../era/era-debug.js'></script>
+		<script src='../applications/applications.js'></script>
+<script>
+var app = new Ui.App();
+var vbox = new Ui.VBox({ verticalAlign: 'center', horizontalAlign: 'center' });
+app.setContent(vbox);
+
+var hbox = new Ui.HBox({ uniform: true, spacing: 5 });
+vbox.append(hbox);
+
+var button = new Ui.Button({ text: '0' });
+app.connect(button, 'press', function() {
+	progressbar.setValue(0);
+});
+hbox.append(button);
+
+var button = new Ui.Button({ text: '0.5' });
+app.connect(button, 'press', function() {
+	progressbar.setValue(0.5);
+});
+hbox.append(button);
+
+var button = new Ui.Button({ text: '1' });
+app.connect(button, 'press', function() {
+	progressbar.setValue(1);
+});
+hbox.append(button);
+
+var progressbar = new Host.ProgressBar({ value: 0.5, width: 50, height: 8 });
+vbox.append(progressbar);
+
+</script>
+  </head>
+</html>

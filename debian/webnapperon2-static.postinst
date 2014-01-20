@@ -1,0 +1,25 @@
+#!/bin/bash
+
+# test if running user exists
+id webnapperon2 > /dev/null 2> /dev/null;
+if [[ $? != 0  ]]; then
+	useradd -r --home /var/lib/webnapperon2/ --shell /bin/false -M webnapperon2;
+fi
+
+# logs directory
+if [[ ! ( -x /var/log/webnapperon2 ) ]]; then
+        mkdir -p /var/log/webnapperon2;
+        chown webnapperon2:webnapperon2 /var/log/webnapperon2;
+fi
+
+# data directory
+if [[ ! ( -x /var/lib/webnapperon2 ) ]]; then
+        mkdir -p /var/lib/webnapperon2;
+        chown webnapperon2:webnapperon2 /var/lib/webnapperon2;
+fi
+
+# PID directory
+if [[ ! ( -x /var/run/webnapperon2 ) ]]; then
+        mkdir -p /var/run/webnapperon2;
+        chown webnapperon2:webnapperon2 /var/run/webnapperon2;
+fi

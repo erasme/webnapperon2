@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Host</title>
+	<script src='era/era-debug.js'></script>
+  </head>
+  <script>
+
+Ui.Draggable.extend('Host.FileIcon', {
+	path: undefined,
+
+	constructor: function(config) {
+
+		var def = config.def;
+		delete(config.def);
+		this.path = config.path;
+		delete(config.path);
+
+		console.log('File: '+this.path+'/'+def.name);
+
+		var vbox = new Ui.VBox();
+		this.setContent(vbox);
+
+		vbox.append(new Ui.Rectangle({ fill: 'lightblue', width: 50, height: 50 }));
+		vbox.append(new Ui.Label({ text: def.name }));
+
+	}
+});
+
+Ui.Draggable.extend('Host.DirIcon', {
+	path: undefined,
+	def: undefined,
+
+	constructor: function(config) {
+		this.def = config.def;
+		delete(config.def);
+		this.path = config.path;
+		delete(config.path);
+
+		this.setContent(new Ui.Rectangle({ fill: 'orange', width: 50, height: 50 }));
+	},
+
+	getFullPath: function() {
+		return this.path+'/'+this.def.name;
+	}
+});
+
+Ui.App.extend('Host.App', {
+	flow: undefined,
+    locator: undefined,
+	storage: '9cc2492f-5571-48aa-a254-1873b3bfa362',
+	monitor: undefined,
+
+	constructor: function(config) {
+		var vbox = new Ui.VBox();
+		this.setContent(vbox);
+
+		var toolbar = new Ui.ToolBar();
+		vbox.append(toolbar);
+
+		this.locator = new Ui.Locator({ path: '/' });
+		toolbar.append(this.locator);
+		this.connect(this.locator, 'change', this.onLocatorChange);
+		
+		var scroll = new Ui.ScrollingArea({ scrollHorizontal: false });
+		vbox.append(scroll, true);
+
+		this.flow = new Ui.Flow({ uniform: true });
+		scroll.setContent(this.flow);
+
+		this.onLocatorChange(this.locator, '/');
+	},
+
+	onInfoDone: function(request) {
+		var res = request.getResponseJSON();
+		for(var i = 0; i < res.content.length; i++) {
+			var item = res.content[i];
+			if(item.type == 'file')
+				this.flow.append(new Host.FileIcon({ path: this.locator.getPath(), def: item, margin: 10 }));
+			else if(item.type == 'dir') {
+				var dirIcon = new Host.DirIcon({ path: this.locator.getPath(), def: item, margin: 10 });
+				this.connect(dirIcon, 'activate', this.onDirActivate);
+				this.flow.append(dirIcon);
+
+			}
+		}
+	},
+
+	onDirActivate: function(dirIcon) {
+		this.locator.setPath(dirIcon.getFullPath());
+		this.onLocatorChange(this.locator, this.locator.getPath());
+	},
+
+	onLocatorChange: function(locator, path) {
+		console.log('onLocatorChange: '+path);
+		this.locator.setPath(path);
+
+		while(this.flow.getFirstChild() != undefined)
+			this.flow.remove(this.flow.getFirstChild());
+
+		var request = new Core.HttpRequest({ url: '/cloud/storage', arguments: { id: this.storage, cmd: 'info', path: path, depth: 1 } });
+		this.connect(request, 'done', this.onInfoDone);
+		request.send();
+
+		if(this.monitor != undefined)
+			this.monitor.close();
+
+		this.monitor = new Core.Socket({ service: '/cloud/storagemonitor?storage='+encodeURIComponent(this.storage)+'&path='+encodeURIComponent(path) });
+		this.connect(this.monitor, 'open', this.onSocketOpen);
+		this.connect(this.monitor, 'message', this.onSocketMessage);
+		
+	},
+
+	onSocketOpen: function() {
+		console.log('onSocketOpen');
+	},
+
+	onSocketMessage: function() {
+		console.log('onSocketMessage');
+	}
+});
+
+new Host.App();
+
+
+  </script>
+</html>

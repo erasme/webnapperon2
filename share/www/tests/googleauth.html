@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Host</title>
+	<script src='era/era-debug.js'></script>
+  </head>
+  <script>
+
+Ui.App.extend('Host.App', {
+	socket: undefined,
+
+	constructor: function(config) {
+		var vbox = new Ui.VBox();
+		this.setContent(vbox);
+
+		var hbox = new Ui.HBox();
+		vbox.append(hbox);
+
+		var button = new Ui.Button({ text: 'open' });
+		this.connect(button, 'press', this.onOpenPress);
+		hbox.append(button);
+
+		var button = new Ui.Button({ text: 'close' });
+		this.connect(button, 'press', this.onClosePress);
+		hbox.append(button);
+
+		var button = new Ui.Button({ text: 'basiclogin' });
+		this.connect(button, 'press', this.onBasicLoginPress);
+		hbox.append(button);
+
+	},
+
+	onOpenPress: function() {
+		console.log('onOpenPress');
+		this.socket = new Core.Socket({ service: '/cloud/socket' });
+		this.connect(this.socket, 'open', this.onSocketOpen);
+		this.connect(this.socket, 'error', this.onSocketError);
+		this.connect(this.socket, 'close', this.onSocketClose);
+		this.connect(this.socket, 'message', this.onSocketMessage);
+	},
+
+	onClosePress: function() {
+		console.log('onClosePress');
+		this.socket.close();
+		this.socket = undefined;
+	},
+
+	onBasicLoginPress: function() {
+		console.log('onBasicLoginPress');
+		this.socket.send({ _t: 'ServiceCommand', Id: 1, Service: 'basiclogin', Method: 'Login', Args: { login: 'daniel', password: 'daniel' } });
+	},
+
+	onSocketOpen: function(socket) {
+		console.log('onSocketOpen');
+	},
+
+	onSocketClose: function(socket) {
+		console.log('onSocketClose');
+	},
+
+	onSocketError: function(socket) {
+		console.log('onSocketError');
+	},
+
+	onSocketMessage: function(socket, msg) {
+		console.log('onSocketMessage');
+		console.log(msg);
+	}
+});
+
+new Host.App();
+
+
+  </script>
+</html>

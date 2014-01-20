@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ItemType>GenericProject</ItemType>
+    <ProductVersion>10.0.0</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{27A0CB60-2B22-406E-BCC7-2F0A86DB575E}</ProjectGuid>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <OutputPath>.</OutputPath>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <OutputPath>.</OutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="changelog" />
+    <None Include="compat" />
+    <None Include="control" />
+    <None Include="copyright" />
+    <None Include="rules" />
+    <None Include="webnapperon2.sh" />
+    <None Include="webnapperon2.postinst" />
+    <None Include="webnapperon2.default" />
+    <None Include="webnapperon2.logrotate" />
+    <None Include="webnapperon2.upstart" />
+    <None Include="webnapperon2-static.postinst" />
+    <None Include="webnapperon2-static.prerm" />
+    <None Include="webnapperon2.prerm" />
+  </ItemGroup>
+</Project>

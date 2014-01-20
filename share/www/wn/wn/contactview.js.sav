@@ -1,0 +1,289 @@
+
+Ui.LBox.extend('Wn.ContactSharesView', {
+	user: undefined,
+	contact: undefined,
+	shares: undefined,
+
+	constructor: function(config) {
+		this.user = config.user;
+		delete(config.user);
+
+		this.contact = config.contact;
+		delete(config.contact);
+	},
+
+	onContactChange: function() {
+		var resources = this.contact.getResources();
+		if(resources.length == 0) {
+			this.setContent(new Ui.Text({ fontWeight: 'bold', text: 'Ce contact ne partage pas de ressources avec vous', margin: 20, textAlign: 'center', verticalAlign: 'center' }));
+			this.shares = undefined;
+		}
+		else {
+			if(this.shares == undefined) {
+				this.shares = new Ui.Flow({ uniform: true });
+				this.setContent(this.shares);
+			}
+			while(this.shares.getFirstChild() != undefined)
+				this.shares.remove(this.shares.getFirstChild());
+			for(var i = 0; i < resources.length; i++) {
+				var resource = resources[i];
+				var share = new Wn.ResourceView({ user: this.user, contact: this.contact, resource: resource, margin: 5, width: 210, height: 210 });
+				this.shares.append(share);
+			}
+		}
+	}
+}, {
+	onLoad: function() {
+		Wn.ContactSharesView.base.onLoad.call(this);
+
+		this.connect(this.contact, 'change', this.onContactChange);
+		if(this.contact.getIsReady())
+			this.onContactChange();
+	},
+	
+	onUnload: function() {
+		Wn.ContactSharesView.base.onUnload.call(this);
+		
+		this.disconnect(this.contact, 'change', this.onContactChange);
+	}
+});
+
+Ui.LBox.extend('Wn.ContactView', {
+	user: undefined,
+	contact: undefined,
+	contentbox: undefined,
+	addRemoveButton: undefined,
+	addMode: true,
+
+	constructor: function(config) {
+		this.user = config.user;
+		delete(config.user);
+
+		this.contact = config.contact;
+		delete(config.contact);
+
+		var scroll = new Ui.ScrollingArea({ scrollHorizontal: false });
+		this.setContent(scroll);
+
+		var vbox = new Ui.VBox();
+		scroll.setContent(vbox);
+		
+		var contacthbox = new Ui.HBox({ margin: 10 });
+		vbox.setContent(contacthbox);
+
+		var lbox = new Ui.LBox({ verticalAlign: 'top' });
+		contacthbox.append(lbox);
+		lbox.append(new Ui.Rectangle({ fill: '#999999' }));
+		lbox.append(new Ui.Rectangle({ fill: '#f1f1f1', margin: 1 }));
+
+		this.contactface = new Ui.Image({ width: 64, height: 64, margin: 1, src: this.contact.getFaceUrl() });
+		lbox.append(this.contactface);
+
+		this.contactlabel = new Wn.UserTitle({ text: '', marginTop: 16, marginLeft: 10, textAlign: 'left', verticalAlign: 'top' });
+		if(this.contact.getIsReady())
+			this.contactlabel.setText(this.contact.getFirstname()+' '+this.contact.getLastname());
+		contacthbox.append(this.contactlabel, true);
+
+		var actions = new Ui.Flow({ uniform: true });
+		//var actions = new Ui.HBox({ spacing: 5 });
+		contacthbox.append(actions, true);
+
+		// if user is an admin
+		if(this.user.isAdmin()) {
+			// let him view the contact stats
+			var button = new Ui.Button({ icon: 'stats' });
+			button.setStyle({ 'Ui.Button': { color: '#d04040' }});
+			this.connect(button, 'press', this.onStatsPress);
+			actions.append(button);
+		
+			// let him view the contact profil
+			var button = new Ui.Button({ icon: 'person' });
+			button.setStyle({ 'Ui.Button': { color: '#d04040' }});
+			this.connect(button, 'press', this.onProfilPress);
+			actions.append(button);
+
+			// let him connect on this contact account
+			var button = new Ui.Button({ icon: 'mask' });
+			button.setStyle({ 'Ui.Button': { color: '#b243ff' }});
+			this.connect(button, 'press', this.onSwitchPress);
+			actions.append(button);
+
+			// let him delete the account
+			var button = new Ui.Button({ icon: 'trash' });
+			button.setStyle({ 'Ui.Button': { color: '#d04040' }});
+			this.connect(button, 'press', this.onDeletePress);
+			actions.append(button);
+		}
+
+		var button = new Ui.Button({ icon: 'bubble' });
+		this.connect(button, 'press', this.onMessagesPress);
+		actions.append(button);
+
+		if(this.user.getContact(this.contact.getId()) != undefined) {
+			this.addMode = false;
+			this.addRemoveButton = new Ui.Button({ icon: 'remove-person' });
+			this.connect(this.addRemoveButton, 'press', this.onRemoveContactPress);
+		}
+		else {
+			this.addMode = true;
+			this.addRemoveButton = new Ui.Button({ icon: 'add-person' });
+			this.connect(this.addRemoveButton, 'press', this.onAddContactPress);
+		}
+		actions.append(this.addRemoveButton);
+
+		vbox.append(new Wn.ContactSharesView({ user: this.user, contact: this.contact }), true);
+	},
+
+	onStatsPress: function() {
+		var dialog = new Wn.UserStatsDialog({ contact: this.contact });
+		dialog.open();
+	},
+
+	onProfilPress: function() {
+		var user = new Wn.User({ user:  { id: this.contact.getId(), face_rev: 0 }, monitor: false });
+		var dialog = new System.UserProfil({ user: user });
+		dialog.open();
+	},
+
+	onMessagesPress: function() {
+		var dialog = new Wn.ContactMessagesDialog({ user: this.user, contact: this.contact });
+		dialog.open();
+	},
+
+	onRemoveContactPress: function() {
+		var dialog = new Ui.Dialog({
+			title: 'Retirer un contact',
+			fullScrolling: true,
+			preferedWidth: 300,
+			preferedHeight: 300,
+			cancelButton: new Ui.Button({ text: 'Annuler' }),
+			content: new Ui.Text({ text: 'Voulez vous supprimer ce contact de votre liste de contact ?\n\nCela ne vous empêchera pas de le remettre plus tard si vous changez d\'avis.' })
+		});
+		var removeButton = new Ui.Button({ text: 'Supprimer', style: { "Ui.Button": { color: '#fa4141' } } });
+		this.connect(removeButton, 'press', function() {
+			this.user.removeContact(this.contact);
+			dialog.close();
+			Ui.App.current.setDefaultMain();
+		});
+		dialog.setActionButtons([ removeButton ]);
+		dialog.open();
+	},
+
+	onAddContactPress: function() {
+		var dialog = new Ui.Dialog({
+			title: 'Ajout de contact',
+			fullScrolling: true,
+			preferedWidth: 300,
+			preferedHeight: 300,
+			cancelButton: new Ui.Button({ text: 'Annuler' }),
+			content: new Ui.Text({ text: 'Voulez vous ajouter ce contact dans votre liste de contact ?' })
+		});
+		var addButton = new Ui.Button({ text: 'Ajouter', style: { "Ui.Button": { color: '#43c3ff' } } });
+		this.connect(addButton, 'press', function() {
+			this.user.addContact(this.contact);
+			dialog.close();
+		});
+		dialog.setActionButtons([ addButton ]);
+		dialog.open();
+	},
+
+	onUserChange: function() {
+		var addMode = (this.user.getContact(this.contact.getId()) == undefined);
+		if(addMode != this.addMode) {
+			if(addMode) {
+				this.disconnect(this.addRemoveButton, 'press', this.onRemoveContactPress);
+				this.connect(this.addRemoveButton, 'press', this.onAddContactPress);
+				this.addRemoveButton.setIcon('add-person');
+			}
+			else {
+				this.disconnect(this.addRemoveButton, 'press', this.onAddContactPress);
+				this.connect(this.addRemoveButton, 'press', this.onRemoveContactPress);
+				this.addRemoveButton.setIcon('remove-person');
+			}
+			this.addMode = addMode;
+		}
+	},
+
+	onContactChange: function() {
+		this.contactlabel.setText(this.contact.getFirstname()+' '+this.contact.getLastname());
+	},
+
+	onDeletePress: function() {
+		var dialog = new Ui.Dialog({
+			title: 'Suppression de compte',
+			fullScrolling: true,
+			preferedWidth: 300,
+			preferedHeight: 300
+		});
+		dialog.setContent(new Ui.Text({ text: 
+			'Voulez vous vraiment supprimer ce compte ? ATTENTION, cet utilisateur '+
+			'et toutes ses ressources n\'existeront plus après cette action.' }));
+		dialog.setCancelButton(new Ui.Button({ text: 'Annuler' }));
+		var deleteButton = new Ui.Button({ text: 'Supprimer' });
+		deleteButton.setStyle({ 'Ui.Button': { color: '#d04040' }});
+		dialog.setActionButtons([deleteButton]);
+
+		this.connect(deleteButton, 'press', function() {
+			dialog.disable();
+			var request = new Core.HttpRequest({ method: 'DELETE', url: '/cloud/user/'+this.contact.getId() });
+			this.connect(request, 'done', function() {
+				dialog.close();
+				Ui.App.current.setMainPath('');
+			});
+			this.connect(request, 'error', function() {
+				dialog.close();
+			});
+			request.send();
+		});
+		dialog.open();
+	},
+
+	onSwitchPress: function() {
+		var session = undefined;
+
+		var dialog = new Ui.Dialog({
+			title: 'Connexion au compte',
+			fullScrolling: true,
+			preferedWidth: 300,
+			preferedHeight: 300
+		});
+		dialog.setContent(new Ui.Text({ text: 
+			'Voulez vous vraiment ouvrir une session sur le compte de cet utilisateur ? ATTENTION, '+
+			'vous ne serez plus sur votre compte et vous aller agir au nom de cette personne.' }));
+		dialog.setCancelButton(new Ui.Button({ text: 'Annuler' }));
+		var switchButton = new Ui.Button({ text: 'Commuter' });
+		switchButton.setStyle({ 'Ui.Button': { color: '#b243ff' }});
+		switchButton.disable();
+		dialog.setActionButtons([switchButton]);
+
+		var request = new Core.HttpRequest({ method: 'POST', url: '/cloud/authsession', content: JSON.stringify({ user: this.contact.getId() }) });
+		this.connect(request, 'done', function() {
+			session = request.getResponseJSON();
+			switchButton.enable();
+		});
+		request.send();
+
+		this.connect(switchButton, 'press', function() {
+			dialog.close();
+			window.open('/?authsession='+session.id);
+		});
+		dialog.open();
+	}
+}, {
+	onLoad: function() {
+		Wn.ContactView.base.onLoad.call(this);
+
+		this.connect(this.user, 'change', this.onUserChange);
+		this.connect(this.contact, 'change', this.onContactChange);
+		this.onUserChange();
+		this.onContactChange();
+	},
+	
+	onUnload: function() {
+		Wn.ContactView.base.onUnload.call(this);
+		
+		this.disconnect(this.user, 'change', this.onUserChange);
+		this.disconnect(this.contact, 'change', this.onContactChange);
+	}
+});
+

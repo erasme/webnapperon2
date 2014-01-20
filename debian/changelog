@@ -1,0 +1,270 @@
+webnapperon2 (2.1) raring; urgency=low (NOT YET RELEASE)
+
+  * remove the MimeIconService
+  * Dont hide "Valider" button for Wn.ContactNewMessage and Wn.CommentViewer
+    when there is something in the text field
+  * Ensure there is no gap in the user's contact list position fields
+  
+ -- Daniel Lacroix <dlacroix@erasme.org>  Mon, 07 Oct 2013 12:13:00 +0200
+
+webnapperon2 (2.0) raring; urgency=low
+
+  * Correct a bug which prevent auto play with RFID for public contents
+  * Update to liberasme-cloud 1.0 and liberasme-http
+  * Use upstart for the Unix daemon
+  * Provide static binary packaging
+  * Add option to allow GZip HTTP
+  
+ -- Daniel Lacroix <dlacroix@erasme.org>  Mon, 07 Oct 2013 12:13:00 +0200
+
+webnapperon2 (1.28-1) raring; urgency=low
+
+  * Correct a bug which prevent RFID readers attached to a user to work
+  * Support public RFID tags
+  
+ -- Daniel Lacroix <dlacroix@erasme.org>  Wed,  3 Jun 2013 14:12:00 +0200
+
+webnapperon2 (1.27-1) raring; urgency=low
+
+  * Add GET request support for RFID
+  
+ -- Daniel Lacroix <dlacroix@erasme.org>  Tue,  2 Jui 2013 09:30:00 +0200
+
+webnapperon2 (1.26-1) raring; urgency=low 
+
+  * Says yes to certmgr because package install is not interactive
+  * Correct event handler list growing bug in UserMonitoring
+  * Add google and facebook authentication in modification
+  
+ -- Daniel Lacroix <dlacroix@erasme.org>  Wed, 19 Jun 2013 16:04:00 +0200
+
+webnapperon2 (1.25-1) raring; urgency=low
+
+  * Major update of the ui graphics
+  * In comment viewer, allow the text field to scroll
+  
+ -- Daniel Lacroix <dlacroix@erasme.org>  Mon,  3 Jun 2013 17:10:00 +0200
+
+webnapperon2 (1.24-1) raring; urgency=low
+
+  * Correct problem with the "new" on content not updated
+    in real time
+  * Add Facebook authentication
+  * Add readers and devices support (RFID)
+  
+ -- Daniel Lacroix <dlacroix@erasme.org>  Thu, 30 May 2013 12:38:00 +0200
+
+webnapperon2 (1.23-1) raring; urgency=low
+
+  * In news RSS feeds, use link if no guid provided
+  * Check if emails are valid in UserService
+  * Rollback for UserMonitoringService because we lost
+    contact status
+    
+ -- Daniel Lacroix <dlacroix@erasme.org>  Fri, 26 Apr 2013 09:18:00 +0200
+
+webnapperon2 (1.22-1) raring; urgency=low
+
+  * Correct tab navigation in IE8
+  * Improve text align in IE and Firefox in buttons
+  * Remove a possible dead lock in UserMonitoringService
+  * Add public share symbol and improve perf
+
+ -- Daniel Lacroix <dlacroix@erasme.org>  Thu, 25 Apr 2013 15:25:00 +0200
+
+webnapperon2 (1.21-1) raring; urgency=low
+
+  * Correct problem in Ui.Entry for password fields in IE7&8
+
+ -- Daniel Lacroix <dlacroix@erasme.org>  Tue, 23 Apr 2013 12:21:00 +0200
+
+webnapperon2 (1.20-1) raring; urgency=low
+
+  * Support text editor in IE7&8
+  * Correct admin user profil editor since we no more watch user changes
+  * Correct user profil save in IE7&8 with null values
+  * Change howto interact with Ui.Entry and Ui.TextArea
+  * Correct JSON.stringify to support null
+
+ -- Daniel Lacroix <dlacroix@erasme.org>  Tue, 23 Apr 2013 12:09:00 +0200
+
+webnapperon2 (1.19-1) raring; urgency=low
+
+  * Update ERAjs (IE8 SvgParser problem)
+  * Dont watch user changes in the UserProfil
+
+ -- Daniel Lacroix <dlacroix@erasme.org>  Mon, 22 Apr 2013 15:10:00 +0200
+
+webnapperon2 (1.18-1) raring; urgency=low
+
+  * Update ERAjs (test font loaded problem)
+
+ -- Daniel Lacroix <dlacroix@erasme.org>  Mon, 22 Apr 2013 12:34:00 +0200
+
+webnapperon2 (1.17-1) raring; urgency=low
+
+  * Remove remotedebug in text editor
+  * Update ERAjs (checkbox, test font loaded...)
+
+ -- Daniel Lacroix <dlacroix@erasme.org>  Mon, 22 Apr 2013 10:46:00 +0200
+
+webnapperon2 (1.16-1) raring; urgency=low
+
+  * Allow change/create of the login
+  * Pause media content when moving on the carousel
+
+ -- Daniel Lacroix <dlacroix@erasme.org>  Tue, 16 Apr 2013 15:25:00 +0200
+
+webnapperon2 (1.15-1) quantal; urgency=low
+
+  * Correct mem leak in excanvas
+  * Support the partially buffered carousel
+  * Support mouse wheel horizontal scroll
+  * Correct problem with limited contact's messages
+  * Limit loaded image in PDF viewer to the visibles only
+  * Correct bugs with font-face detection
+
+ -- Daniel Lacroix <dlacroix@erasme.org>  Tue, 16 Apr 2013 15:25:00 +0200
+
+webnapperon2 (1.14-1) quantal; urgency=low
+
+  * Correct drag & drop pb in IE 7&8
+  * Dont open to heavy text file
+  * Correct focus jumping on iOS
+  * Handle none existing resources
+  * Remove all unknown content in synchronized RSS
+  * Support RTF
+  * Provide a default cache time in setup
+  * Handle notification in synchronized RSS
+  * Correct concurrency bug in user monitoring
+
+ -- Daniel Lacroix <dlacroix@erasme.org>  Thu, 28 Mar 2013 11:29:00 +0100
+
+webnapperon2 (1.13-1) quantal; urgency=low
+
+  * Correct problem with Word conversion
+
+ -- Daniel Lacroix <dlacroix@erasme.org>  Mon, 25 Mar 2013 17:22:00 +0100
+
+webnapperon2 (1.11-1) quantal; urgency=low
+
+  * Add viewer support for Word, PowerPoint and OpenDocument
+
+ -- Daniel Lacroix <dlacroix@erasme.org>  Wed, 20 Mar 2013 17:25:00 +0100
+
+webnapperon2 (1.10-1) quantal; urgency=low
+
+  * Update ERAjs
+
+ -- Daniel Lacroix <dlacroix@erasme.org>  Wed, 20 Mar 2013 10:55:00 +0100
+
+webnapperon2 (1.9-1) quantal; urgency=low
+
+  * use canvas for ResourceView graphics (performance)
+  * correct problem with external fonts in Webkit. Provide requireFont
+  * Create a PicasaService
+  * Create a PodcastService
+  * Create a NewsService
+  * Correct bug not changing path when removing a resource
+
+ -- Daniel Lacroix <dlacroix@erasme.org>  Tue, 19 Mar 2013 17:35:00 +0100
+ 
+webnapperon2 (1.8-1) quantal; urgency=low
+
+  * Bug, cant create new user/account
+
+ -- Daniel Lacroix <dlacroix@erasme.org>  Thu, 14 Feb 2013 12:20:00 +0100
+
+webnapperon2 (1.7-1) quantal; urgency=low
+
+  * Remote sync in PathLog for performance
+  * Change login request from GET to POST
+  * encode passwords in SHA1 in the DB
+  * update AuthSessionService HTTP protocol
+  * In storage viewer use double click to switch fullscreen
+  * Correct orientation bug in user face upload
+  * Update to the new version of ERAjs (dialog full scrolling for example)
+  * Start of user stats for admin
+  * Start of right management for user service
+
+ -- Daniel Lacroix <dlacroix@erasme.org>  Thu, 14 Feb 2013 11:30:00 +0100
+
+webnapperon2 (1.6-1) quantal; urgency=low
+
+  * Bug correct: resource notifications disappear
+  * Bug correct: comment disappear when multiple files drag & drop upload
+  * Bug correct: set cookie in Google authentication has no Path
+  * Force IE7 mode even when compat mode is set in IE8
+
+ -- Daniel Lacroix <dlacroix@erasme.org>  Mon,  7 Jan 2013 10:50:00 +0200
+
+webnapperon2 (1.5-1) quantal; urgency=low
+
+  * Force IE7 compatibility mode for IE8
+  * Add pathlog service to keep trace of user activity
+  * Add a logrotate
+  * Change new message view
+  * Add reorder resources, contacts and files in storages
+  * Add default rights for share and write
+  * Allow web link in message and comment
+  * Set a mark when a resource is new
+
+ -- Daniel Lacroix <dlacroix@erasme.org>  Mon,  7 Jan 2013 10:50:00 +0200
+
+webnapperon2 (1.4-1) quantal; urgency=low
+
+  * Correct important memory leaks in web client
+
+ -- Daniel Lacroix <dlacroix@erasme.org>  Mon,  7 Jan 2013 10:50:00 +0200
+
+webnapperon2 (1.3-1) quantal; urgency=low
+
+  * Update to liberasme-cloud0.3-0.3.4
+  * Correct bug in Storage.Viewer which notify main path change
+    for an uploading file.
+
+ -- Daniel Lacroix <dlacroix@erasme.org>  Wed,  2 Jan 2013 15:41:00 +0200
+
+webnapperon2 (1.2-1) quantal; urgency=low
+
+  * Update to liberasme-cloud0.3-0.3.3
+
+ -- Daniel Lacroix <dlacroix@erasme.org>  Tue,  1 Jan 2013 22:12:00 +0200
+
+webnapperon2 (1.1-1) quantal; urgency=low
+
+  * Update to liberasme-cloud0.3-0.3.2
+
+ -- Daniel Lacroix <dlacroix@erasme.org>  Thu, 20 Dec 2012 18:02:00 +0200
+
+webnapperon2 (1.0-1) quantal; urgency=low
+
+  * Correct lock look in UserService when deleting resource
+
+ -- Daniel Lacroix <dlacroix@erasme.org>  Thu, 20 Dec 2012 16:48:00 +0200
+
+webnapperon2 (0.3-1) quantal; urgency=low
+
+  * Update storage protocol
+
+ -- Daniel Lacroix <dlacroix@erasme.org>  Thu, 20 Dec 2012 14:05:00 +0200
+
+webnapperon2 (0.2.1-1) quantal; urgency=low
+
+  * Correct embed pb with Lucene
+  * Correct init script to create the PID directory
+
+ -- Daniel Lacroix <dlacroix@erasme.org>  Wed, 19 Dec 2012 15:30:00 +0200
+
+webnapperon2 (0.2-1) quantal; urgency=low
+
+  * Rewrite user service protocol
+  * Many improvement in the client
+
+ -- Daniel Lacroix <dlacroix@erasme.org>  Tue, 18 Dec 2012 15:41:00 +0200
+
+webnapperon2 (0.1-1) precise; urgency=low
+
+  * Initial release
+
+ -- Daniel Lacroix <dlacroix@erasme.org>  Tue, 20 Nov 2012 12:39:00 +0200

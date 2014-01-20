@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>HOST</title>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<link rel="apple-touch-icon" sizes="72x72" href="img/apple-icon-72x72.png"/>
+		<link rel="apple-touch-icon" sizes="114x114" href="img/apple-icon-114x114.png"/>
+		<script src='era/era.js'></script>
+		<script src='wn/wn.js'></script>
+<style>
+body {
+	background-color: #eeeeee;
+}
+a {
+	color: #4d4d4d;
+}
+a:visited {
+	color: #5d5d5d;
+}
+
+@font-face {
+  font-family: 'Ubuntu';
+  font-style: normal;
+  font-weight: 400;
+  src: url("font/ubuntu-r-webfont.woff") format("woff"),
+       url("font/ubuntu-r-webfont.ttf") format("truetype");
+}
+@font-face {
+  font-family: 'Ubuntu';
+  font-style: normal;
+  font-weight: 700;
+  src: url("font/ubuntu-b-webfont.woff") format("woff"),
+       url("font/ubuntu-b-webfont.ttf") format("truetype");
+}
+@font-face {
+  font-family: 'Ubuntu';
+  font-style: normal;
+  font-weight: 100;
+  src: url("font/ubuntu-l-webfont.woff") format("woff"),
+       url("font/ubuntu-l-webfont.ttf") format("truetype");
+}
+
+</style>
+  </head>
+  <body>
+    <!-- just force font loading before canvas usage -->
+    <div style="position: absolute; top: -100px; left: -100px">
+      <div style="font: normal 700 1px Ubuntu">&nbsp;</div>
+	  <div style="font: normal 400 1px Ubuntu">&nbsp;</div>
+      <div style="font: normal 100 1px Ubuntu">&nbsp;</div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Host</title>
+	<script src='era/era-debug.js'></script>
+  </head>
+  <script>
+
+Ui.Dialog.extend('Host.DeleteDialog', {
+	idField: undefined,
+
+	constructor: function(config) {
+		this.setCancelButton(new Ui.Button({ text: 'Annuler' }));
+
+		var removeButton = new Ui.Button({ text: 'Effacer' });
+		this.connect(removeButton, 'press', this.onRemovePress);
+		this.setActionButtons([removeButton]);
+
+		this.idField = new Ui.TextField({ width: 200 });
+		this.setContent(this.idField);
+	},
+
+	onRemovePress: function() {
+		var request = new Core.HttpRequest({ method: 'DELETE', url: '/cloud/user', arguments: { cmd: 'delete', user: this.idField.getValue() } });
+		this.connect(request, 'done', function(cmd) {
+			console.log('remove done');
+			console.log(cmd.getResponseJSON());
+			this.close();
+		});
+		this.connect(request, 'error', function(cmd) {
+			console.log('remove error');
+			this.close();
+		});
+		request.send();
+	}
+});
+
+Ui.Dialog.extend('Host.CreateDialog', {
+	firstnameField: undefined,
+	lastnameField: undefined,
+	loginField: undefined,
+	passwordField: undefined,
+	emailField: undefined,
+
+	constructor: function(config) {
+		this.setCancelButton(new Ui.Button({ text: 'Annuler' }));
+
+		var createButton = new Ui.Button({ text: 'Créer' });
+		this.connect(createButton, 'press', this.onCreatePress);
+		this.setActionButtons([createButton]);
+
+		var vbox = new Ui.VBox();
+		this.setContent(vbox);
+
+		vbox.append(new Ui.Label({ text: 'Prénom:' }));
+
+		this.firstnameField = new Ui.TextField({ width: 200 });
+		vbox.append(this.firstnameField);
+
+		vbox.append(new Ui.Label({ text: 'Nom:' }));
+
+		this.lastnameField = new Ui.TextField({ width: 200 });
+		vbox.append(this.lastnameField);
+
+		vbox.append(new Ui.Label({ text: 'Identifiant:' }));
+
+		this.loginField = new Ui.TextField({ width: 200 });
+		vbox.append(this.loginField);
+
+		vbox.append(new Ui.Label({ text: 'Mot de passe:' }));
+
+		this.passwordField = new Ui.TextField({ width: 200 });
+		vbox.append(this.passwordField);
+
+		vbox.append(new Ui.Label({ text: 'Email:' }));
+
+		this.emailField = new Ui.TextField({ width: 200 });
+		vbox.append(this.emailField);
+	},
+
+	onCreatePress: function() {
+		var request = new Core.HttpRequest({ method: 'POST', url: '/cloud/user?cmd=create',
+			content: JSON.stringify({
+				firstname: this.firstnameField.getValue(),
+				lastname: this.lastnameField.getValue(),
+				login: this.loginField.getValue(),
+				password: this.passwordField.getValue(),
+				email: this.emailField.getValue() })
+		});
+		this.connect(request, 'done', function(cmd) {
+			console.log('create done');
+			console.log(cmd.getResponseJSON());
+			this.close();
+		});
+		this.connect(request, 'error', function(cmd) {
+			console.log('create error');
+			this.close();
+		});
+		request.send();
+	}
+});
+
+
+Ui.App.extend('Host.App', {
+	socket: undefined,
+
+	constructor: function(config) {
+		var vbox = new Ui.VBox();
+		this.setContent(vbox);
+
+		var hbox = new Ui.HBox();
+		vbox.append(hbox);
+
+		var button = new Ui.Button({ text: 'create user' });
+		this.connect(button, 'press', this.onCreatePress);
+		hbox.append(button);
+
+		var button = new Ui.Button({ text: 'delete user' });
+		this.connect(button, 'press', this.onDeletePress);
+		hbox.append(button);
+	},
+
+	onCreatePress: function() {
+		var dialog = new Host.CreateDialog();
+		dialog.open();
+	},
+
+	onDeletePress: function() {
+		var dialog = new Host.DeleteDialog();
+		dialog.open();
+	}
+});
+
+new Host.App();
+
+
+  </script>
+</html>

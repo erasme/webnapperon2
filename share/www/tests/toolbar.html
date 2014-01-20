@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Host</title>
+	<script src='../era/era-debug.js'></script>
+	<script src='../wn/wn/toolbar.js'></script>
+  </head>
+  <script>
+
+Ui.App.extend('Test.App', {
+	constructor: function(config) {
+	
+		var hbox = new Wn.ToolBar({ verticalAlign: 'top', spacing: 10 });
+		this.setContent(hbox);
+		
+		hbox.append(new Ui.Rectangle({ fill: 'red', width: 100, height: 50 }));
+		
+		hbox.append(new Ui.Rectangle({ fill: 'green', width: 350, height: 50 }), true);
+
+		hbox.append(new Ui.Rectangle({ fill: 'blue', width: 50, height: 50 }));
+		hbox.append(new Ui.Rectangle({ fill: 'blue', width: 50, height: 50 }));
+		hbox.append(new Ui.Rectangle({ fill: 'blue', width: 50, height: 50 }));
+		hbox.append(new Ui.Rectangle({ fill: 'blue', width: 50, height: 50 }));
+		hbox.append(new Ui.Rectangle({ fill: 'blue', width: 50, height: 50 }));
+
+	}
+});
+
+new Test.App();
+
+
+  </script>
+</html>

@@ -1,0 +1,16 @@
+
+Support HTTPS:
+--------------
+
+Pour le support de HTTPS (indispensable pour certains services),
+il faut installer les authoritées de certification à l'aide de
+la commande:
+
+sudo mozroots --import --ask-remove --machine
+sudo certmgr --ssl https://www.google.com/
+
+Encodage MP3:
+-------------
+
+Pour supporter l'encodage MP3 dans FFMPEG, il faut installer
+libavcodec-extra-53 à la place de libavcodec53

@@ -1,0 +1,12 @@
+
+/var/log/webnapperon2/webnapperon2.log
+{
+	rotate 24
+	weekly
+	missingok
+	nocreate
+	sharedscripts
+	postrotate
+		restart webnapperon2 >/dev/null 2>&1 || true
+	endscript
+}

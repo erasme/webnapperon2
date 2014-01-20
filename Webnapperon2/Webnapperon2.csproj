@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>10.0.0</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{D46AE805-4BFB-47F6-9278-09CA3497B801}</ProjectGuid>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Webnapperon2</RootNamespace>
+    <AssemblyName>Webnapperon2</AssemblyName>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug</OutputPath>
+    <WarningLevel>4</WarningLevel>
+    <Commandlineparameters>-c /etc/webnapperon2/webnapperon2.conf</Commandlineparameters>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Release</OutputPath>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Xml" />
+    <Reference Include="Mono.Data.Sqlite" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Security" />
+    <Reference Include="SgmlReaderDll">
+      <HintPath>lib\SgmlReaderDll.dll</HintPath>
+    </Reference>
+    <Reference Include="Erasme.Http">
+      <HintPath>..\..\..\liberasme-http-cil\liberasme-http-cil\Erasme.Http\bin\Debug\Erasme.Http.dll</HintPath>
+    </Reference>
+    <Reference Include="Erasme.Cloud">
+      <HintPath>..\..\..\liberasme-cloud-cil\Erasme.Cloud\Erasme.Cloud\bin\Debug\Erasme.Cloud.dll</HintPath>
+    </Reference>
+    <Reference Include="Mono.Posix" />
+    <Reference Include="System.Xml.Linq" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Main.cs" />
+    <Compile Include="AssemblyInfo.cs" />
+    <Compile Include="Setup.cs" />
+    <Compile Include="Webnapperon2.User\UserService.cs" />
+    <Compile Include="Webnapperon2.Resource\ResourceService.cs" />
+    <Compile Include="Webnapperon2.PathLog\PathLogService.cs" />
+    <Compile Include="Webnapperon2.Picasa\PicasaService.cs" />
+    <Compile Include="Webnapperon2.Podcast\PodcastService.cs" />
+    <Compile Include="Webnapperon2.News\NewsService.cs" />
+    <Compile Include="NReadability\ChildNodesTraverser.cs" />
+    <Compile Include="NReadability\DomExtensions.cs" />
+    <Compile Include="NReadability\DomSerializationParams.cs" />
+    <Compile Include="NReadability\ElementsTraverser.cs" />
+    <Compile Include="NReadability\EncodedStringWriter.cs" />
+    <Compile Include="NReadability\Enums.cs" />
+    <Compile Include="NReadability\InternalErrorException.cs" />
+    <Compile Include="NReadability\NReadabilityTranscoder.cs" />
+    <Compile Include="NReadability\SgmlDomBuilder.cs" />
+    <Compile Include="NReadability\SgmlDomSerializer.cs" />
+    <Compile Include="NReadability\UtilityExtensions.cs" />
+    <Compile Include="Webnapperon2.Rfid\RfidService.cs" />
+    <Compile Include="Server.cs" />
+    <Compile Include="Webnapperon2.Compatibility\SafariETagPlugin.cs" />
+    <Compile Include="Webnapperon2.Compatibility\SafariKeepAlivePlugin.cs" />
+    <Compile Include="Webnapperon2.Compatibility\IECompatibilityPlugin.cs" />
+    <Compile Include="WebException.cs" />
+  </ItemGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <ItemGroup>
+    <None Include="webnapperon2.conf" />
+    <None Include="lib\SgmlReaderDll.dll" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Webnapperon2.User\" />
+    <Folder Include="Webnapperon2.Resource\" />
+    <Folder Include="Webnapperon2.PathLog\" />
+    <Folder Include="Webnapperon2.Picasa\" />
+    <Folder Include="Webnapperon2.News\" />
+    <Folder Include="Webnapperon2.Podcast\" />
+    <Folder Include="lib\" />
+    <Folder Include="NReadability\" />
+    <Folder Include="Webnapperon2.Rfid\" />
+    <Folder Include="Webnapperon2.Compatibility\" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,51 @@
+
+Ui.CanvasElement.extend('Wn.AppViewGraphic', {
+	icon: undefined,
+
+	constructor: function(config) {
+	},
+
+	setIcon: function(icon) {
+		this.icon = icon;
+		this.invalidateDraw();		
+	}
+}, {
+	measureCore: function(width, height) {
+		return { width: 120, height: 120 };
+	},
+
+	updateCanvas: function(ctx) {	
+		var width = this.getLayoutWidth();
+		var height = this.getLayoutHeight();
+		var fontHeight = 24;
+
+		// shadow
+		this.roundRectFilledShadow(0, 0, width, height, 8, 8, 8, 8, false, 4, new Ui.Color({ r: 0.08, g: 0.08,b: 0.08, a: 0.5}));
+
+		// background
+		var grd = ctx.createLinearGradient(0, 3, 0, height-3);
+		grd.addColorStop(0, '#dedede');
+		grd.addColorStop(1, '#cccccc');
+		ctx.fillStyle = grd;
+		ctx.beginPath();
+		this.roundRect(3, 3, width-6, height-6, 5, 5, 5, 5);
+		ctx.closePath();
+		ctx.fill();
+				
+		// icon
+		if(this.icon !== undefined) {
+			var path = Ui.Icon.getPath(this.icon);
+			var iconSize = 100;
+			var scale = iconSize/48;			
+			ctx.save();
+			ctx.translate((width-iconSize)/2, ((height-iconSize)/2)-1);
+			ctx.scale(scale, scale);
+			ctx.fillStyle = '#666666';
+			ctx.beginPath();
+			this.svgPath(path);
+			ctx.closePath();
+			ctx.fill();
+			ctx.restore();
+		}
+	}
+});

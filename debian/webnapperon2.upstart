@@ -1,0 +1,13 @@
+description "start and stop webnapperon2 service"
+version "2.0"
+author "Daniel Lacroix <dlacroix@erasme.org>"
+
+env LD_LIBRARY_PATH=/usr/lib/webnapperon2/
+
+respawn
+respawn limit 10 5
+start on (filesystem and net-device-up)
+setgid webnapperon2
+setuid webnapperon2
+exec /usr/bin/webnapperon2
+console log
