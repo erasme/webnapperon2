@@ -9,5 +9,5 @@ respawn limit 10 5
 start on (filesystem and net-device-up)
 setgid webnapperon2
 setuid webnapperon2
-exec /usr/bin/webnapperon2
+exec /usr/bin/webnapperon2 -c /etc/webnapperon2/webnapperon2.conf
 console log
