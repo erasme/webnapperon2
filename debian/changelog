@@ -1,11 +1,11 @@
-webnapperon2 (2.1) raring; urgency=low (NOT YET RELEASE)
+webnapperon2 (2.1) raring; urgency=low
 
   * remove the MimeIconService
   * Dont hide "Valider" button for Wn.ContactNewMessage and Wn.CommentViewer
     when there is something in the text field
   * Ensure there is no gap in the user's contact list position fields
   
- -- Daniel Lacroix <dlacroix@erasme.org>  Mon, 07 Oct 2013 12:13:00 +0200
+ -- Daniel Lacroix <dlacroix@erasme.org>  Thu, 21 Jan 2014 10:32:00 +0100
 
 webnapperon2 (2.0) raring; urgency=low
 
