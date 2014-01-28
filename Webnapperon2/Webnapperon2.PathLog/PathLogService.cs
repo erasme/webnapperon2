@@ -65,7 +65,10 @@ namespace Webnapperon2.PathLog
 				dbcmd.CommandText = "PRAGMA synchronous=0";
 				dbcmd.ExecuteNonQuery();
 			}
+			Rights = new DummyPathLogRights();
 		}
+
+		public IPathLogRights Rights { get; set; }
 
 		public JsonArray GetLogs(int limit)
 		{
@@ -223,11 +226,14 @@ namespace Webnapperon2.PathLog
 		public async Task ProcessRequestAsync(HttpContext context)
 		{
 			long id = 0;
-			string[] parts = context.Request.Path.Split (new char[] { '/' }, System.StringSplitOptions.RemoveEmptyEntries);
+			string[] parts = context.Request.Path.Split(new char[] { '/' }, System.StringSplitOptions.RemoveEmptyEntries);
 
 			// GET /[id] get a log
 			if((context.Request.Method == "GET") && (parts.Length == 1) && long.TryParse(parts[0], out id)) {
 				JsonValue log = GetLog(id);
+
+				Rights.EnsureCanReadLog(context, log["owner"]);
+
 				if(log == null)
 					context.Response.StatusCode = 404;
 				else {
@@ -244,10 +250,14 @@ namespace Webnapperon2.PathLog
 
 				JsonArray res = new JsonArray();
 
-				if(context.Request.QueryString.ContainsKey("user"))
+				if(context.Request.QueryString.ContainsKey("user")) {
+					Rights.EnsureCanReadLog(context, context.Request.QueryString["user"]);
 					res = GetUserLogs(context.Request.QueryString["user"], limit);
-				else
+				}
+				else {
+					Rights.EnsureCanReadAllLogs(context);
 					res = GetLogs(limit);
+				}
 				context.Response.StatusCode = 200;
 				context.Response.Headers["cache-control"] = "no-cache, must-revalidate";
 				context.Response.Content = new JsonContent(res);
@@ -255,6 +265,9 @@ namespace Webnapperon2.PathLog
 			// POST / create a log
 			else if((context.Request.Method == "POST") && (parts.Length == 0)) {
 				JsonValue json = await context.Request.ReadAsJsonAsync();
+
+				Rights.EnsureCanCreateLog(context, json["owner"]);
+
 				CreateLog(json);
 
 				context.Response.StatusCode = 200;
@@ -262,6 +275,10 @@ namespace Webnapperon2.PathLog
 			}
 			// DELETE /[log] delete a log
 			else if((context.Request.Method == "DELETE") && (parts.Length == 1) && long.TryParse(parts[0], out id)) {
+				JsonValue log = GetLog(id);
+
+				Rights.EnsureCanDeleteLog(context, log["owner"]);
+
 				DeleteLog(id);
 				context.Response.StatusCode = 200;
 				context.Response.Headers["cache-control"] = "no-cache, must-revalidate";
