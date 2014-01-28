@@ -86,6 +86,9 @@ namespace Webnapperon2
 			Add(new IECompatibilityPlugin());
 			// plugin to remove Keep-Alive support in iOS Safari because of iOS bugs
 			Add(new SafariKeepAlivePlugin());
+			// plugin to get the connected user JSON profil
+			UserPlugin userPlugin = new UserPlugin();
+			Add(userPlugin);
 
 			PathMapper mapper = new PathMapper();
 			Add(mapper);
@@ -124,6 +127,7 @@ namespace Webnapperon2
 
 			// messagerie
 			MessageService messageService = new MessageService(Setup.Storage+"/message/");
+			messageService.Rights = new Webnapperon2.Message.MessageRights();
 			mapper.Add(Setup.Path+"/message", messageService);
 
 			// Queue
@@ -139,12 +143,15 @@ namespace Webnapperon2
 				Setup.AuthHeader, Setup.AuthCookie, Setup.SmtpServer,
 				Setup.SmtpFrom, Setup.TemporaryDirectory, Setup.DefaultCacheDuration, Logger);
 			mapper.Add(Setup.Path+"/user", userService);
+			userPlugin.UserService = userService;
 
 			// resource
 			mapper.Add(Setup.Path+"/resource", new ResourceService(userService));
 
 			// pathlogs
-			mapper.Add(Setup.Path+"/pathlog", new PathLogService(Setup.Storage+"/pathlog"));
+			PathLogService pathLogService = new PathLogService(Setup.Storage + "/pathlog");
+			pathLogService.Rights = new Webnapperon2.PathLog.PathLogRights();
+			mapper.Add(Setup.Path+"/pathlog", pathLogService);
 
 			// RFID
 			mapper.Add(Setup.Path+"/rfid", new RfidService(userService, messageService, queueService, Logger));
