@@ -1,3 +1,9 @@
+webnapperon2 (2.2) raring; urgency=low (NOT YET RELEASED)
+
+  * Provide rights check for MessageService and PathLogService
+  
+ -- Daniel Lacroix <dlacroix@erasme.org>  Thu, 21 Jan 2014 10:32:00 +0100
+
 webnapperon2 (2.1) raring; urgency=low
 
   * remove the MimeIconService
