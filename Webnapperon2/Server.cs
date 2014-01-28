@@ -123,6 +123,8 @@ namespace Webnapperon2
 			NewsService newsService = new NewsService(
 				Setup.Storage+"/news/", storageService, Setup.TemporaryDirectory,
 				LongRunningTaskFactory, Logger);
+			Webnapperon2.Storage.StorageRights storageRights = new Webnapperon2.Storage.StorageRights();
+			storageService.Rights = storageRights;
 			mapper.Add(Setup.Path+"/news", newsService);
 
 			// messagerie
@@ -144,6 +146,7 @@ namespace Webnapperon2
 				Setup.SmtpFrom, Setup.TemporaryDirectory, Setup.DefaultCacheDuration, Logger);
 			mapper.Add(Setup.Path+"/user", userService);
 			userPlugin.UserService = userService;
+			storageRights.UserService = userService;
 
 			// resource
 			mapper.Add(Setup.Path+"/resource", new ResourceService(userService));
@@ -157,7 +160,9 @@ namespace Webnapperon2
 			mapper.Add(Setup.Path+"/rfid", new RfidService(userService, messageService, queueService, Logger));
 
 			// management
-			mapper.Add(Setup.Path+"/status", new ManageService());
+			ManageService manageService = new ManageService();
+			manageService.Rights = new Webnapperon2.Manage.ManageRights();
+			mapper.Add(Setup.Path+"/status", manageService);
 
 			// static file distribution (web app)
 			Add(new StaticFilesService(Setup.Static+"/www/", Setup.DefaultCacheDuration));

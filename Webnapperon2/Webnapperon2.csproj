@@ -71,6 +71,8 @@
     <Compile Include="Webnapperon2.User\UserPlugin.cs" />
     <Compile Include="Webnapperon2.PathLog\IPathLogRights.cs" />
     <Compile Include="Webnapperon2.PathLog\PathLogRights.cs" />
+    <Compile Include="Webnapperon2.Storage\StorageRights.cs" />
+    <Compile Include="Webnapperon2.Manage\ManageRights.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
@@ -89,5 +91,7 @@
     <Folder Include="Webnapperon2.Rfid\" />
     <Folder Include="Webnapperon2.Compatibility\" />
     <Folder Include="Webnapperon2.Message\" />
+    <Folder Include="Webnapperon2.Storage\" />
+    <Folder Include="Webnapperon2.Manage\" />
   </ItemGroup>
 </Project>
