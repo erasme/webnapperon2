@@ -67,6 +67,10 @@
     <Compile Include="Webnapperon2.Compatibility\SafariKeepAlivePlugin.cs" />
     <Compile Include="Webnapperon2.Compatibility\IECompatibilityPlugin.cs" />
     <Compile Include="WebException.cs" />
+    <Compile Include="Webnapperon2.Message\MessageRights.cs" />
+    <Compile Include="Webnapperon2.User\UserPlugin.cs" />
+    <Compile Include="Webnapperon2.PathLog\IPathLogRights.cs" />
+    <Compile Include="Webnapperon2.PathLog\PathLogRights.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
@@ -84,5 +88,6 @@
     <Folder Include="NReadability\" />
     <Folder Include="Webnapperon2.Rfid\" />
     <Folder Include="Webnapperon2.Compatibility\" />
+    <Folder Include="Webnapperon2.Message\" />
   </ItemGroup>
 </Project>
