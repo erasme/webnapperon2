@@ -1,7 +1,6 @@
 
 Storage.BaseViewer.extend('News.Viewer', {
 	loadText: undefined,
-	infoRequest: undefined,
 	infoTask: undefined,
 
 	constructor: function(config) {
@@ -10,56 +9,11 @@ Storage.BaseViewer.extend('News.Viewer', {
 		this.loadText = new Ui.Text({ text: 'Chargement en cours... Veuillez patienter', textAlign: 'center' });
 		vbox.append(this.loadText);
 		this.setContent(vbox);
-		
-		this.connect(this, 'load', this.onViewerLoad);
-		this.connect(this, 'unload', this.onViewerUnload);
-		
-		if(this.getIsLoaded())
-			this.onViewerLoad();
 	},
-	
-	onViewerLoad: function() {
-		if(this.infoRequest !== undefined)
-			return;
-		if(this.getStorage() === undefined) {
-			this.infoRequest = new Core.HttpRequest({ url: '/cloud/news/'+this.getResource().getData() });
-			this.connect(this.infoRequest, 'done', this.onGetNewsDone);
-			this.connect(this.infoRequest, 'error', this.onGetNewsError);
-			this.infoRequest.send();
-		}
-	},
-	
-	onViewerUnload: function() {
-		if(this.infoTask !== undefined) {
-			this.infoTask.abort();
-			this.infoTask = undefined;
-		}
-	},
-	
+
 	onInfoTask: function() {
-		this.onViewerLoad();
+		this.resource.update();
 		this.infoTask = undefined;
-	},
-	
-	onGetNewsDone: function() {
-		var json = this.infoRequest.getResponseJSON();
-		this.infoRequest = undefined;
-		if((json.utime == 0) && (json.failcount == 0)) {
-			this.loadText.setText('Synchronisation des news en cours... Veuillez patienter');
-			if(this.getIsLoaded())
-				this.infoTask = new Core.DelayedTask({ delay: 2, callback: this.onInfoTask, scope: this });
-		}
-		else if((json.utime == 0) && (json.failcount > 0))
-			this.setContent(new Ui.Text({ text: 'Echec de la synchronisation des news (nombre d\'échec: '+json.failcount+'). Il y a sûrement un problème sur cet album.', textAlign: 'center', verticalAlign: 'center' }));
-		else if((json.utime > 0) && (json.failcount > 0) && (json.delta > 60*60*24*7))
-			this.setContent(new Ui.Text({ text: 'Echec de la synchronisation des news depuis une semaine. L\'album a peut être été supprimé...', textAlign: 'center', verticalAlign: 'center' }));
-		else		
-			this.setStorage(json.storage);
-	},
-	
-	onGetNewsError: function() {
-		this.setContent(new Ui.Text({ text: 'Impossible de récupérer le journal. Il n\'est peut être plus accessible.', textAlign: 'center', verticalAlign: 'center' }));
-		this.infoRequest = undefined;
 	}
 }, {
 	canAddFile: function() {
@@ -68,6 +22,39 @@ Storage.BaseViewer.extend('News.Viewer', {
 	
 	canDeleteFile: function() {
 		return false;
+	},
+
+	onResourceChange: function() {
+		News.Viewer.base.onResourceChange.apply(this, arguments);
+
+		if(this.getStorage() === undefined) {
+			var json = this.getResource().getData();
+			if((json.utime == 0) && (json.failcount == 0)) {
+				this.loadText.setText('Synchronisation des news en cours... Veuillez patienter');
+				if(this.getIsLoaded())
+					this.infoTask = new Core.DelayedTask({ delay: 2, callback: this.onInfoTask, scope: this });
+			}
+			else if((json.utime == 0) && (json.failcount > 0))
+				this.setContent(new Ui.Text({ text: 'Echec de la synchronisation des news (nombre d\'échec: '+json.failcount+'). Il y a sûrement un problème sur cet album.', textAlign: 'center', verticalAlign: 'center' }));
+			else if((json.utime > 0) && (json.failcount > 0) && (json.delta > 60*60*24*7))
+				this.setContent(new Ui.Text({ text: 'Echec de la synchronisation des news depuis une semaine. L\'album a peut être été supprimé...', textAlign: 'center', verticalAlign: 'center' }));
+			else		
+				this.setStorage(json.storage);
+		}
+	},
+
+	onLoad: function() {
+		News.Viewer.base.onLoad.call(this);
+		if(this.resource.getIsReady())
+			this.onResourceChange();
+	},
+	
+	onUnload: function() {
+		News.Viewer.base.onUnload.call(this);
+		if(this.infoTask !== undefined) {
+			this.infoTask.abort();
+			this.infoTask = undefined;
+		}
 	}
 }, {
 	constructor: function() {

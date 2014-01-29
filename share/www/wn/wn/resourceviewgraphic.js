@@ -73,14 +73,14 @@ Ui.CanvasElement.extend('Wn.ResourceViewGraphic', {
 		// background
 		ctx.fillStyle = 'rgb(240, 240, 240)';
 		ctx.beginPath();
-		ctx.roundRect(3, 3, width-6, height-6, 0, 0, 0, 0);
+		ctx.rect(3, 3, width-6, height-6);
 		ctx.closePath();
 		ctx.fill();
 
 		// header
 		ctx.fillStyle = 'rgb(60, 60, 60)';
 		ctx.beginPath();
-		ctx.roundRect(3, 3, width-6, 15+fontHeight+7, 0, 0, 0, 0);
+		ctx.rect(3, 3, width-6, 15+fontHeight+7);
 		ctx.closePath();
 		ctx.fill();
 			
@@ -98,12 +98,12 @@ Ui.CanvasElement.extend('Wn.ResourceViewGraphic', {
 					
 		// end text shadow	
 		var grd2 = ctx.createLinearGradient(width-(3+40), 3, width-3, 3);
-		grd2.addColorStop(0, 'rgba(60, 60, 60, 0)');//'rgba(0,0,0,0)');
-		grd2.addColorStop(0.9, 'rgb(60, 60, 60)');//'#000000');
-		grd2.addColorStop(1, 'rgb(60, 60, 60)');//'#000000');
+		grd2.addColorStop(0, 'rgba(60, 60, 60, 0)');
+		grd2.addColorStop(0.9, 'rgb(60, 60, 60)');
+		grd2.addColorStop(1, 'rgb(60, 60, 60)');
 		ctx.fillStyle = grd2;
 		ctx.beginPath();
-		ctx.roundRect(width-(3+40), 3, 40, 15+fontHeight+7, 0, 5, 0, 0);
+		ctx.rect(width-(3+40), 3, 40, 15+fontHeight+7);
 		ctx.closePath();
 		ctx.fill();
 
@@ -146,7 +146,7 @@ Ui.CanvasElement.extend('Wn.ResourceViewGraphic', {
 			ctx.save();
 			ctx.translate((width-iconSize)/2, (15+7+fontHeight+height-iconSize)/2);
 			ctx.scale(scale, scale);
-			ctx.fillStyle = 'rgb(60, 60, 60)';//'#000000';
+			ctx.fillStyle = 'rgb(60, 60, 60)';
 			ctx.beginPath();
 			ctx.svgPath(path);
 			ctx.closePath();

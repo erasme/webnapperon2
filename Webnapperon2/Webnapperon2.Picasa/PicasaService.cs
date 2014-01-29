@@ -42,7 +42,7 @@ using Erasme.Cloud.Storage;
 
 namespace Webnapperon2.Picasa
 {
-	public class PicasaService: IHttpHandler, IDisposable
+	public class PicasaService: IDisposable
 	{
 		StorageService storageService;
 		ILogger logger;
@@ -206,6 +206,24 @@ namespace Webnapperon2.Picasa
 				res["delta"] = delta;
 			}
 			return res;
+		}
+
+		public void GetPicasa(long id, JsonValue value, string filterBy)
+		{
+			string storage = null;
+			string url = null;
+			long utime = 0;
+			int failcount = 0;
+			double delta = 0;
+			if(!GetPicasaInfo(id, out storage, out url, out utime, out failcount, out delta))
+				throw new WebException(404, 0, "Picasa album not found");
+			else {
+				value["storage"] = storage;
+				value["url"] = url;
+				value["utime"] = utime;
+				value["failcount"] = failcount;
+				value["delta"] = delta;
+			}
 		}
 
 		struct PicasaElement
@@ -414,40 +432,6 @@ namespace Webnapperon2.Picasa
 			}
 			if(task != null)
 				task.Start(longRunningTaskFactory.Scheduler);
-		}
-
-		public async Task ProcessRequestAsync(HttpContext context)
-		{
-			string[] parts = context.Request.Path.Split(new char[] { '/' }, System.StringSplitOptions.RemoveEmptyEntries);
-			long id = 0;
-
-			// GET /[id] get picasa info
-			if((context.Request.Method == "GET") && (parts.Length == 1) && long.TryParse(parts[0], out id)) {
-				context.Response.StatusCode = 200;
-				context.Response.Headers["cache-control"] = "no-cache, must-revalidate";
-				context.Response.Content = new JsonContent(GetPicasa(id));
-			}
-			// GET /[id]/update update a picasa album
-			else if((context.Request.Method == "GET") && (parts.Length == 2) && long.TryParse(parts[0], out id) && (parts[1] == "update")) {
-				QueueUpdatePicasa(id);
-				context.Response.StatusCode = 200;
-				context.Response.Headers["cache-control"] = "no-cache, must-revalidate";
-			}
-			// POST / create a picasa album
-			else if((context.Request.Method == "POST") && (parts.Length == 0)) {
-				JsonValue json = await context.Request.ReadAsJsonAsync();
-
-				id = CreatePicasa((string)json["url"]);
-				context.Response.StatusCode = 200;
-				context.Response.Headers["cache-control"] = "no-cache, must-revalidate";
-				context.Response.Content = new JsonContent(GetPicasa(id));
-			}
-			// DELETE /[id] delete a picasa album
-			else if((context.Request.Method == "DELETE") && (parts.Length == 1) && long.TryParse(parts[0], out id)) {
-				DeletePicasa(id);
-				context.Response.StatusCode = 200;
-				context.Response.Headers["cache-control"] = "no-cache, must-revalidate";
-			}
 		}
 
 		public void Dispose()

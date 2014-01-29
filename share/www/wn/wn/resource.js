@@ -145,13 +145,9 @@ Core.Object.extend('Wn.Resource', {
 	},
 
 	getData: function() {
-		return this.data.data;
-	},
-
-	getResource: function() {
 		return this.data;
 	},
-
+	
 	getName: function() {
 		return this.data.name;
 	},

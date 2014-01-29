@@ -1482,6 +1482,41 @@ namespace Webnapperon2.User
 				}
 				resource["seenByMeRev"] = seenRev;
 			}
+			// get type specific data
+			string type = (string)resource["type"];
+			switch(type) {
+			case "storage":
+				//storageId = storage.CreateStorage(-1);
+				//data = storageId;
+				break;
+			case "picasa":
+				picasa.GetPicasa(Convert.ToInt64((string)resource["data"]), resource, filterUserId);
+				// update if last update is older than 60 seconds
+				if((resource["utime"] == 0) || (resource["delta"] >= 60.0))
+					picasa.QueueUpdatePicasa(Convert.ToInt64((string)resource["data"]));
+				break;
+			case "podcast":
+				podcast.GetPodcast(Convert.ToInt64((string)resource["data"]), resource, filterUserId);
+				if((resource["utime"] == 0) || (resource["delta"] >= 60.0))
+					podcast.QueueUpdatePodcast(Convert.ToInt64((string)resource["data"]));
+				break;
+			case "news":
+				news.GetNews(Convert.ToInt64((string)resource["data"]), resource, filterUserId);
+				if((resource["utime"] == 0) || (resource["delta"] >= 60.0))
+					news.QueueUpdateNews(Convert.ToInt64((string)resource["data"]));
+				break;
+			}
+			// get storage specific data
+			if(((string)resource["storage_id"]) != null) {
+				JsonValue root = storage.GetFileInfo((string)resource["storage_id"], 0, 1);
+				if(root.ContainsKey("children")) {
+					JsonArray files = (JsonArray)root["children"];
+					if(files.Count > 0) {
+						JsonValue file = files[0];
+						resource["previewImageUrl"] = "/cloud/previewhigh/" + resource["storage_id"] + "/" + file["id"] + "?rev=" + file["rev"];
+					}
+				}
+			}
 			return resource;
 		}
 

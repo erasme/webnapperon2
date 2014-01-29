@@ -43,7 +43,7 @@ using Erasme.Cloud.Storage;
 
 namespace Webnapperon2.Podcast
 {
-	public class PodcastService: IHttpHandler, IDisposable
+	public class PodcastService: IDisposable
 	{
 		StorageService storageService;
 		ILogger logger;
@@ -209,6 +209,24 @@ namespace Webnapperon2.Podcast
 			return res;
 		}
 
+		public void GetPodcast(long id, JsonValue value, string filterBy)
+		{
+			string storage = null;
+			string url = null;
+			long utime = 0;
+			int failcount = 0;
+			double delta = 0;
+			if(!GetPodcastInfo(id, out storage, out url, out utime, out failcount, out delta))
+				throw new WebException(404, 0, "Podcast album not found");
+			else {
+				value["storage"] = storage;
+				value["url"] = url;
+				value["utime"] = utime;
+				value["failcount"] = failcount;
+				value["delta"] = delta;
+			}
+		}
+
 		struct PodcastElement
 		{
 			public string Guid;
@@ -371,39 +389,6 @@ namespace Webnapperon2.Podcast
 			}
 			if(task != null)
 				task.Start(longRunningTaskFactory.Scheduler);
-		}
-
-		public async Task ProcessRequestAsync(HttpContext context)
-		{
-			string[] parts = context.Request.Path.Split(new char[] { '/' }, System.StringSplitOptions.RemoveEmptyEntries);
-			long id = 0;
-
-			// GET /[id] get podcast info
-			if((context.Request.Method == "GET") && (parts.Length == 1) && long.TryParse(parts[0], out id)) {
-				context.Response.StatusCode = 200;
-				context.Response.Headers["cache-control"] = "no-cache, must-revalidate";
-				context.Response.Content = new JsonContent(GetPodcast(id));
-			}
-			// GET /[id]/update update a podcast
-			else if((context.Request.Method == "GET") && (parts.Length == 2) && long.TryParse(parts[0], out id) && (parts[1] == "update")) {
-				QueueUpdatePodcast(id);
-				context.Response.StatusCode = 200;
-				context.Response.Headers["cache-control"] = "no-cache, must-revalidate";
-			}
-			// POST / create a podcast
-			else if((context.Request.Method == "POST") && (parts.Length == 0)) {
-				JsonValue json = await context.Request.ReadAsJsonAsync();
-				id = CreatePodcast((string)json["url"]);
-				context.Response.StatusCode = 200;
-				context.Response.Headers["cache-control"] = "no-cache, must-revalidate";
-				context.Response.Content = new JsonContent(GetPodcast(id));
-			}
-			// DELETE /[id] delete a podcast
-			else if((context.Request.Method == "DELETE") && (parts.Length == 1) && long.TryParse(parts[0], out id)) {
-				DeletePodcast(id);
-				context.Response.StatusCode = 200;
-				context.Response.Headers["cache-control"] = "no-cache, must-revalidate";
-			}
 		}
 
 		public void Dispose()

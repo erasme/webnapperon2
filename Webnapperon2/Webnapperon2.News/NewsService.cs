@@ -46,7 +46,7 @@ using NReadability;
 
 namespace Webnapperon2.News
 {
-	public class NewsService: IHttpHandler, IDisposable
+	public class NewsService: IDisposable
 	{
 		StorageService storageService;
 		ILogger logger;
@@ -218,6 +218,26 @@ namespace Webnapperon2.News
 				res["fullcontent"] = fullcontent;
 			}
 			return res;
+		}
+
+		public void GetNews(long id, JsonValue value, string filterBy)
+		{
+			string storage = null;
+			string url = null;
+			long utime = 0;
+			int failcount = 0;
+			double delta = 0;
+			bool fullcontent = false;
+			if(!GetNewsInfo(id, out storage, out url, out utime, out failcount, out delta, out fullcontent))
+				throw new WebException(404, 0, "News stream not found");
+			else {
+				value["storage"] = storage;
+				value["url"] = url;
+				value["utime"] = utime;
+				value["failcount"] = failcount;
+				value["delta"] = delta;
+				value["fullcontent"] = fullcontent;
+			}
 		}
 
 		struct NewsElement
@@ -538,43 +558,6 @@ namespace Webnapperon2.News
 			}
 			if(task != null)
 				task.Start(longRunningTaskFactory.Scheduler);
-		}
-
-		public async Task ProcessRequestAsync(HttpContext context)
-		{
-			string[] parts = context.Request.Path.Split(new char[] { '/' }, System.StringSplitOptions.RemoveEmptyEntries);
-			long id = 0;
-
-			// GET /[id] get news info
-			if((context.Request.Method == "GET") && (parts.Length == 1) && long.TryParse(parts[0], out id)) {
-				context.Response.StatusCode = 200;
-				context.Response.Headers["cache-control"] = "no-cache, must-revalidate";
-				context.Response.Content = new JsonContent(GetNews(id));
-			}
-			// GET /[id]/update update a news
-			else if((context.Request.Method == "GET") && (parts.Length == 2) && long.TryParse(parts[0], out id) && (parts[1] == "update")) {
-				QueueUpdateNews(id);
-				context.Response.StatusCode = 200;
-				context.Response.Headers["cache-control"] = "no-cache, must-revalidate";
-			}
-			// POST / create a news
-			else if((context.Request.Method == "POST") && (parts.Length == 0)) {
-				JsonValue json = await context.Request.ReadAsJsonAsync();
-
-				bool fullcontent = false;
-				if(json.ContainsKey("fullcontent"))
-					fullcontent = (bool)json["fullcontent"];
-				id = CreateNews((string)json["url"], fullcontent);
-				context.Response.StatusCode = 200;
-				context.Response.Headers["cache-control"] = "no-cache, must-revalidate";
-				context.Response.Content = new JsonContent(GetNews(id));
-			}
-			// DELETE /[id] delete a news
-			else if((context.Request.Method == "DELETE") && (parts.Length == 1) && long.TryParse(parts[0], out id)) {
-				DeleteNews(id);
-				context.Response.StatusCode = 200;
-				context.Response.Headers["cache-control"] = "no-cache, must-revalidate";
-			}
 		}
 
 		public void Dispose()

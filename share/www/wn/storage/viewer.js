@@ -1361,7 +1361,8 @@ Wn.ResourceViewer.extend('Storage.BaseViewer', {
 //		this.mainVbox.remove(this.navigation);
 	},
 
-	onCarouselChange: function(carousel, pos) {	
+	onCarouselChange: function(carousel, pos) {
+
 		if(carousel.getLogicalChildren().length == 0) {
 			this.setTools([]);
 			return;
@@ -1375,6 +1376,7 @@ Wn.ResourceViewer.extend('Storage.BaseViewer', {
 		}
 		
 		var current = this.carousel.getLogicalChildren()[pos];
+
 		if(current !== undefined) {
 			current.current();
 			// handle file properties
@@ -1910,7 +1912,7 @@ Wn.ResourceViewer.extend('Storage.BaseViewer', {
 
 Storage.BaseViewer.extend('Storage.Viewer', {
 	constructor: function(config) {
-		this.setStorage(this.getResource().getData());
+		this.setStorage(this.getResource().getStorageId());
 	}
 }, {}, {
 	constructor: function() {
