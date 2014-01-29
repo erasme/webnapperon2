@@ -116,16 +116,13 @@ namespace Webnapperon2
 			mapper.Add(Setup.Path+"/pdf", new PdfService(Setup.Storage+"/pdf/", storageService, Setup.TemporaryDirectory, Setup.DefaultCacheDuration, LongRunningTaskFactory));
 			PicasaService picasaService = new PicasaService(
 				Setup.Storage+"/picasa/", storageService, LongRunningTaskFactory, Logger);
-			mapper.Add(Setup.Path+"/picasa", picasaService);
 			PodcastService podcastService = new PodcastService(
 				Setup.Storage+"/podcast/", storageService, LongRunningTaskFactory, Logger);
-			mapper.Add(Setup.Path+"/podcast", podcastService);
 			NewsService newsService = new NewsService(
 				Setup.Storage+"/news/", storageService, Setup.TemporaryDirectory,
 				LongRunningTaskFactory, Logger);
 			Webnapperon2.Storage.StorageRights storageRights = new Webnapperon2.Storage.StorageRights();
 			storageService.Rights = storageRights;
-			mapper.Add(Setup.Path+"/news", newsService);
 
 			// messagerie
 			MessageService messageService = new MessageService(Setup.Storage+"/message/");
