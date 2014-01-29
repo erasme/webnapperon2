@@ -2,12 +2,12 @@ Source: webnapperon2
 Section: unknown
 Priority: extra
 Maintainer: Erasme <support@erasme.org>
-Build-Depends: debhelper (>= 5), cli-common-dev (>= 0.7), liberasme-http1.0-cil (>= 1.0.2), liberasme-cloud1.0-cil (>= 1.0.2), libjs-erajs, monodevelop (>= 2.0), libmono-sqlite4.0-cil
+Build-Depends: debhelper (>= 5), cli-common-dev (>= 0.7), liberasme-http1.0-cil (>= 1.0.3), liberasme-cloud1.0-cil (>= 1.0.3), libjs-erajs, monodevelop (>= 2.0), libmono-sqlite4.0-cil
 Standards-Version: 3.9.4
 
 Package: webnapperon2
 Architecture: all
-Depends: ${cli:Depends}, liberasme-http1.0-cil (>= 1.0.2), liberasme-cloud1.0-cil (>= 1.0.2), libjs-erajs (>= 1.5), libmono-sqlite4.0-cil
+Depends: ${cli:Depends}, liberasme-http1.0-cil (>= 1.0.3), liberasme-cloud1.0-cil (>= 1.0.3), libjs-erajs (>= 1.5), libmono-sqlite4.0-cil
 Description: Daemon for the WebNapperon 2 web services
  Daemon to provide Web services and file distribution for the Web Napperon 2
  project (H.O.S.T Communication)
