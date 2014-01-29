@@ -4,7 +4,7 @@ Ui.CanvasElement.extend('TextEditor.PageBackgroundGraphic', {}, {
 		var width = this.getLayoutWidth();
 		var height = this.getLayoutHeight();
 		// shadow
-		this.roundRectFilledShadow(5, 5, width-10, height-10, 2, 2, 2, 2, false, 2, new Ui.Color({ r:0, g: 0, b: 0, a: 0.5}));
+		ctx.roundRectFilledShadow(5, 5, width-10, height-10, 2, 2, 2, 2, false, 2, new Ui.Color({ r:0, g: 0, b: 0, a: 0.5}));
 		// white bg
 		ctx.fillStyle = '#ffffff';
 		ctx.fillRect(7, 7, width-14, height-14);
