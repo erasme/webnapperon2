@@ -2,7 +2,7 @@
 // MessageRights.cs
 //
 // Author:
-//       daniel <>
+//       Daniel Lacroix <dlacroix@erasme.org>
 //
 // Copyright (c) 2014 daniel
 //
