@@ -13,7 +13,6 @@ Ui.CanvasElement.extend('Wn.ResourceViewGraphic', {
 	setTitle: function(title) {
 		this.title = title;
 		this.invalidateDraw();
-		this.invalidateMeasure();
 	},
 
 	//
@@ -47,15 +46,13 @@ Ui.CanvasElement.extend('Wn.ResourceViewGraphic', {
 	},
 	
 	setUserImage: function(imageUrl) {
-		if(this.userImage == undefined) {
-			this.userImage = new Ui.Image();
+		if(this.userImage === undefined) {
+			this.userImage = new Ui.Image({ src: imageUrl });
 			this.appendChild(this.userImage);
-		}
-		this.userImage.setSrc(imageUrl);
-		if(this.userImage.getIsReady())
-			this.invalidateDraw();
-		else
 			this.connect(this.userImage, 'ready', this.invalidateDraw);
+		}
+		else if(this.userImage.getSrc() !== imageUrl)
+			this.userImage.setSrc(imageUrl);
 	}
 }, {
 	measureCore: function(width, height) {

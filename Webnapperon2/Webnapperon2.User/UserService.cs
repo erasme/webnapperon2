@@ -126,6 +126,7 @@ namespace Webnapperon2.User
 		int cacheDuration;
 		ILogger logger;
 		string url;
+		bool isNewDatabase = false;
 
 		IDbConnection dbcon;
 
@@ -166,6 +167,8 @@ namespace Webnapperon2.User
 			dbcon.Open();
 
 			if(createNeeded) {
+				isNewDatabase = true;
+
 				// create the user table
 				using(IDbCommand dbcmd = dbcon.CreateCommand()) {
 					dbcmd.CommandText = "CREATE TABLE user (id VARCHAR PRIMARY KEY, firstname VARCHAR, "+
@@ -247,6 +250,7 @@ namespace Webnapperon2.User
 			this.storage.FileDeleted += OnStorageFileChanged;
 			this.storage.CommentCreated += OnStorageCommentCreated;
 			this.messageService.MessageCreated += OnMessageCreated;
+			this.messageService.MessageChanged += OnMessageChanged;
 		}
 
 		void OnStorageFileChanged(string storage, long file)
@@ -355,55 +359,62 @@ namespace Webnapperon2.User
 			return users;
 		}
 
-		List<string> GetUsersThatKnowResource(string resource)
+		public List<string> GetUsersThatKnowResource(string resource)
 		{
 			List<string> users;
 			// get all user that need to be informed
 			lock(dbcon) {		
 				using(IDbTransaction transaction = dbcon.BeginTransaction()) {
-					// get user who bookmark this resource
-					users = GetUsersWhoBookmarkResource(dbcon, transaction, resource);
-					// get the owner of the resource
-					bool isPublic = false;
-					string owner = null;
-					using(IDbCommand dbcmd = dbcon.CreateCommand()) {
-						dbcmd.Transaction = transaction;
-						dbcmd.CommandText = "SELECT owner_id,public_read FROM resource WHERE id=@resource";
-						dbcmd.Parameters.Add(new SqliteParameter("resource", resource));
-						using(IDataReader reader = dbcmd.ExecuteReader()) {
-							while(reader.Read()) {
-								owner = reader.GetString(0);
-								if(!users.Contains(owner))
-									users.Add(owner);
-								isPublic = (reader.GetInt32(1) == 1);
-							}
-							reader.Close();
-						}
-					}
-					// if resource is public, add all users that has that owner in their contacts
-					if(isPublic) {
-						List<string> contacts = GetUsersThatHasContact(dbcon, transaction, owner);
-						foreach(string contact in contacts)
-							if(!users.Contains(contact))
-								users.Add(contact);
-					}
-					// if resource is private, get all users that has rights on it
-					else {
-						using(IDbCommand dbcmd = dbcon.CreateCommand()) {
-							dbcmd.Transaction = transaction;
-							dbcmd.CommandText = "SELECT DISTINCT(user_id) FROM right WHERE resource_id=@resource AND read=1";
-							dbcmd.Parameters.Add(new SqliteParameter("resource", resource));
-							using(IDataReader reader = dbcmd.ExecuteReader()) {
-								while(reader.Read()) {
-									string rightUser = reader.GetString(0);
-									if(!users.Contains(rightUser))
-										users.Add(rightUser);
-								}
-								reader.Close();
-							}
-						}
-					}
+					users = GetUsersThatKnowResource(dbcon, transaction, resource);
 					transaction.Commit();
+				}
+			}
+			return users;
+		}
+
+		List<string> GetUsersThatKnowResource(IDbConnection dbcon, IDbTransaction transaction, string resource)
+		{
+			List<string> users;
+			// get user who bookmark this resource
+			users = GetUsersWhoBookmarkResource(dbcon, transaction, resource);
+			// get the owner of the resource
+			bool isPublic = false;
+			string owner = null;
+			using(IDbCommand dbcmd = dbcon.CreateCommand()) {
+				dbcmd.Transaction = transaction;
+				dbcmd.CommandText = "SELECT owner_id,public_read FROM resource WHERE id=@resource";
+				dbcmd.Parameters.Add(new SqliteParameter("resource", resource));
+				using(IDataReader reader = dbcmd.ExecuteReader()) {
+					while(reader.Read()) {
+						owner = reader.GetString(0);
+						if(!users.Contains(owner))
+							users.Add(owner);
+						isPublic = (reader.GetInt32(1) == 1);
+					}
+					reader.Close();
+				}
+			}
+			// if resource is public, add all users that has that owner in their contacts
+			if(isPublic) {
+				List<string> contacts = GetUsersThatHasContact(dbcon, transaction, owner);
+				foreach(string contact in contacts)
+					if(!users.Contains(contact))
+						users.Add(contact);
+			}
+			// if resource is private, get all users that has rights on it
+			else {
+				using(IDbCommand dbcmd = dbcon.CreateCommand()) {
+					dbcmd.Transaction = transaction;
+					dbcmd.CommandText = "SELECT DISTINCT(user_id) FROM right WHERE resource_id=@resource AND read=1";
+					dbcmd.Parameters.Add(new SqliteParameter("resource", resource));
+					using(IDataReader reader = dbcmd.ExecuteReader()) {
+						while(reader.Read()) {
+							string rightUser = reader.GetString(0);
+							if(!users.Contains(rightUser))
+								users.Add(rightUser);
+						}
+						reader.Close();
+					}
 				}
 			}
 			return users;
@@ -448,10 +459,37 @@ namespace Webnapperon2.User
 			}
 		}
 
+		void OnMessageChanged(JsonValue message)
+		{
+			JsonValue json = new JsonObject();
+			json["event"] = "messagechanged";
+			json["message"] = message;
+			string jsonString = json.ToString();
+
+			// signal to the monitoring clients
+			lock(instanceLock) {
+				if(clients.ContainsKey((string)message["destination"])) {
+					clients[(string)message["destination"]].Broadcast(jsonString);
+				}
+			}
+		}
+
 		void OnMessageCreated(JsonValue message)
 		{
 			JsonValue destination = GetUser((string)message["destination"], null);
 			JsonValue origin = GetUser((string)message["origin"], null);
+
+			JsonValue json = new JsonObject();
+			json["event"] = "messagereceived";
+			json["message"] = message;
+			string jsonString = json.ToString();
+
+			// signal to the monitoring clients
+			lock(instanceLock) {
+				if(clients.ContainsKey((string)message["destination"])) {
+					clients[(string)message["destination"]].Broadcast(jsonString);
+				}
+			}
 
 			string senderName = null;
 			if(((string)origin["firstname"] != null) && ((string)origin["lastname"] != null)) {
@@ -1490,20 +1528,22 @@ namespace Webnapperon2.User
 				//data = storageId;
 				break;
 			case "picasa":
-				picasa.GetPicasa(Convert.ToInt64((string)resource["data"]), resource, filterUserId);
+				picasa.GetPicasa(id, resource);
 				// update if last update is older than 60 seconds
-				if((resource["utime"] == 0) || (resource["delta"] >= 60.0))
-					picasa.QueueUpdatePicasa(Convert.ToInt64((string)resource["data"]));
+				if(((long)resource["utime"] == 0L) || (resource["delta"] >= 60.0))
+					picasa.QueueUpdatePicasa(resource);
 				break;
 			case "podcast":
-				podcast.GetPodcast(Convert.ToInt64((string)resource["data"]), resource, filterUserId);
-				if((resource["utime"] == 0) || (resource["delta"] >= 60.0))
-					podcast.QueueUpdatePodcast(Convert.ToInt64((string)resource["data"]));
+				podcast.GetPodcast(id, resource);
+				// update if last update is older than 60 seconds
+				if(((long)resource["utime"] == 0L) || (resource["delta"] >= 60.0))
+					podcast.QueueUpdatePodcast(resource);
 				break;
 			case "news":
-				news.GetNews(Convert.ToInt64((string)resource["data"]), resource, filterUserId);
-				if((resource["utime"] == 0) || (resource["delta"] >= 60.0))
-					news.QueueUpdateNews(Convert.ToInt64((string)resource["data"]));
+				news.GetNews(id, resource);
+				// update if last update is older than 60 seconds
+				if(((long)resource["utime"] == 0L) || (resource["delta"] >= 60.0))
+					news.QueueUpdateNews(resource);
 				break;
 			}
 			// get storage specific data
@@ -1763,52 +1803,37 @@ namespace Webnapperon2.User
 		
 		string CreateResource(string user, JsonValue resource)
 		{
-			string storageId = null;
-			string data = null;
 			string type = (string)resource["type"];
-			string name = (string)resource["name"];
 			switch(type) {
 			case "site":
 			case "calendar":
 			case "weather":
 			case "radio":
-				data = (string)resource["data"];
 				break;
 			case "storage":
-				storageId = storage.CreateStorage(-1);
-				data = storageId;
+				resource["storage_id"] = storage.CreateStorage(-1);
 				break;
 			case "picasa":
-				long picasaId = picasa.CreatePicasa((string)resource["data"]);
-				{ 
-					string url; long utime; int failcount; double delta;
-					picasa.GetPicasaInfo(picasaId, out storageId, out url, out utime, out failcount, out delta);
-				}
-				data = picasaId.ToString();
+				picasa.CreatePicasa(resource);
 				break;
 			case "podcast":
-				long podcastId = podcast.CreatePodcast((string)resource["data"]);
-				{
-					string url; long utime; int failcount; double delta;
-					podcast.GetPodcastInfo(podcastId, out storageId, out url, out utime, out failcount, out delta);
-				}
-				data = podcastId.ToString();
+				podcast.CreatePodcast(resource);
 				break;
 			case "news":
-				bool fullcontent = false;
-				if(resource.ContainsKey("fullcontent"))
-					fullcontent = (bool)resource["fullcontent"];
-				long newsId = news.CreateNews((string)resource["data"], fullcontent);
-				{
-					string url; long utime; int failcount; double delta;
-					news.GetNewsInfo(newsId, out storageId, out url, out utime, out failcount, out delta, out fullcontent);
-				}
-				data = newsId.ToString();
+				news.CreateNews(resource);
 				break;
 			default:
 				throw new WebException(400, 0, "Resource type "+type+" not supported");
 			}
-			
+
+			string name = (string)resource["name"];
+			string storageId = null;
+			if(resource.ContainsKey("storage_id"))
+				storageId = (string)resource["storage_id"];
+			string data = null;
+			if(resource.ContainsKey("data"))
+				data = (string)resource["data"];
+						
 			string id = null;
 			lock(dbcon) {										
 			using(IDbTransaction transaction = dbcon.BeginTransaction()) {
@@ -1853,66 +1878,76 @@ namespace Webnapperon2.User
 		{
 			List<string> interestedUsersBefore = null;
 			bool first = true;
-			StringBuilder sb = new StringBuilder();
-			// handle strings
-			foreach(string key in new string[]{ "name" }) {
-				if(diff.ContainsKey(key)) {
-					if(first)
-						first = false;
-					else
-						sb.Append(",");
-					sb.Append(key);
-					sb.Append("=");
-					string value = (string)diff[key];
-					if(value == null)
-						sb.Append("null");
-					else {
-						sb.Append("'");
-						sb.Append(value.Replace("'","''"));
-						sb.Append("'");
-					}
-				}
-			}
-			// handle integers
-			foreach(string key in new string[]{ "rev" }) {
-				if(diff.ContainsKey(key)) {
-					if(first)
-						first = false;
-					else
-						sb.Append(",");
-					sb.Append(key);
-					sb.Append("=");
-					long value = (long)diff[key];
-					sb.Append(value.ToString());
-				}
-			}
-			// handle booleans
-			foreach(string key in new string[]{ "public_read","public_write","public_share" }) {
-				if(diff.ContainsKey(key)) {
-					if(first)
-						first = false;
-					else
-						sb.Append(",");
-					sb.Append(key);
-					sb.Append("=");
-					sb.Append(((bool)diff[key])?1:0);
-				}
-			}
-			// if we change the public right, keep all user interested before
-			if(diff.ContainsKey("public_read"))
-				interestedUsersBefore = GetUsersThatKnowResource(resource);
 
+			JsonValue oldResource = null;
 			JsonValue resourceJson = null;
 
 			lock(dbcon) {
 				using(IDbTransaction transaction = dbcon.BeginTransaction()) {
-					// if something to change
-					if(!first) {
-						// update the user table
-						using(IDbCommand dbcmd = dbcon.CreateCommand()) {
-							dbcmd.Transaction = transaction;
-							dbcmd.CommandText = "UPDATE resource SET "+sb.ToString()+" WHERE id=@resource";
-							dbcmd.Parameters.Add(new SqliteParameter("resource", resource));
+
+					oldResource = GetResource(dbcon, transaction, resource, seenBy);
+
+					string type = oldResource["type"];
+					switch(type) {
+					case "picasa": 
+						picasa.ChangePicasa(resource, oldResource, diff);
+						break;
+					case "podcast": 
+						podcast.ChangePodcast(resource, oldResource, diff);
+						break;
+					case "news": 
+						news.ChangeNews(resource, oldResource, diff);
+						break;
+					}
+
+					// if we change the public right, keep all user interested before
+					if(diff.ContainsKey("public_read"))
+						interestedUsersBefore = GetUsersThatKnowResource(resource);
+
+					// update the resource table
+					using(IDbCommand dbcmd = dbcon.CreateCommand()) {
+						dbcmd.Transaction = transaction;
+						StringBuilder sb = new StringBuilder();
+						// handle strings
+						foreach(string key in new string[]{ "name", "data", "rev" }) {
+							if(diff.ContainsKey(key)) {
+								if(first)
+									first = false;
+								else
+									sb.Append(",");
+								sb.Append(key); sb.Append("=@"); sb.Append(key);
+								dbcmd.Parameters.Add(new SqliteParameter(key, (string)diff[key]));
+							}
+						}
+						// handle integer
+						foreach(string key in new string[]{ "rev" }) {
+							if(diff.ContainsKey(key)) {
+								if(first)
+									first = false;
+								else
+									sb.Append(",");
+								sb.Append(key); sb.Append("=@"); sb.Append(key);
+								dbcmd.Parameters.Add(new SqliteParameter(key, (long)diff[key]));
+							}
+						}
+						// handle booleans
+						foreach(string key in new string[]{ "public_read","public_write","public_share" }) {
+							if(diff.ContainsKey(key)) {
+								if(first)
+									first = false;
+								else
+									sb.Append(",");
+								sb.Append(key); sb.Append("=@"); sb.Append(key);
+								dbcmd.Parameters.Add(new SqliteParameter(key, ((bool)diff[key])?1:0));
+							}
+						}
+
+
+						dbcmd.CommandText = "UPDATE resource SET "+sb.ToString()+" WHERE id=@resource";
+						dbcmd.Parameters.Add(new SqliteParameter("resource", resource));
+
+						// if something to change
+						if(!first) {
 							int count = dbcmd.ExecuteNonQuery();
 							if(count != 1)
 								throw new Exception("Resource update fails");
@@ -2028,16 +2063,10 @@ namespace Webnapperon2.User
 					transaction.Commit();
 				}
 			}
-			
-			// depending on the type of the resource, delete dependencies
-			if((string)resource["type"] == "storage")
+
+			// delete attached storage if any
+			if(resource.ContainsKey("storage_id") && (resource["storage_id"] != null))
 				storage.DeleteStorage((string)resource["data"]);
-			else if((string)resource["type"] == "picasa")
-				picasa.DeletePicasa(Convert.ToInt64((string)resource["data"]));
-			else if((string)resource["type"] == "podcast")
-				podcast.DeletePodcast(Convert.ToInt64((string)resource["data"]));
-			else if((string)resource["type"] == "news")
-				news.DeleteNews(Convert.ToInt64((string)resource["data"]));
 
 			RaisesResourceDeleted(id);
 
@@ -2079,9 +2108,6 @@ namespace Webnapperon2.User
 		public void DeleteUser(string id)
 		{
 			List<string> storages = new List<string>();
-			List<string> picasas = new List<string>();
-			List<string> podcasts = new List<string>();
-			List<string> newss = new List<string>();
 			List<string> contacts = new List<string>();
 			lock(dbcon) {
 				using(IDbTransaction transaction = dbcon.BeginTransaction()) {
@@ -2122,10 +2148,10 @@ namespace Webnapperon2.User
 						dbcmd.ExecuteNonQuery();
 					}
 					
-					// get storage resources
+					// get attached storages
 					using(IDbCommand dbcmd = dbcon.CreateCommand()) {
 						dbcmd.Transaction = transaction;
-						dbcmd.CommandText = "SELECT data FROM resource WHERE owner_id=@id AND type='storage' AND data IS NOT NULL";
+						dbcmd.CommandText = "SELECT storage_id FROM resource WHERE owner_id=@id AND storage_id IS NOT NULL";
 						dbcmd.Parameters.Add(new SqliteParameter("id", id));
 						using(IDataReader reader = dbcmd.ExecuteReader()) {
 							while(reader.Read())
@@ -2133,40 +2159,6 @@ namespace Webnapperon2.User
 							reader.Close();
 						}
 					}
-					// get picasa resources
-					using(IDbCommand dbcmd = dbcon.CreateCommand()) {
-						dbcmd.Transaction = transaction;
-						dbcmd.CommandText = "SELECT data FROM resource WHERE owner_id=@id AND type='picasa' AND data IS NOT NULL";
-						dbcmd.Parameters.Add(new SqliteParameter("id", id));
-						using(IDataReader reader = dbcmd.ExecuteReader()) {
-							while(reader.Read())
-								picasas.Add(reader.GetString(0));
-							reader.Close();
-						}
-					}
-					// get podcast resources
-					using(IDbCommand dbcmd = dbcon.CreateCommand()) {
-						dbcmd.Transaction = transaction;
-						dbcmd.CommandText = "SELECT data FROM resource WHERE owner_id=@id AND type='podcast' AND data IS NOT NULL";
-						dbcmd.Parameters.Add(new SqliteParameter("id", id));
-						using(IDataReader reader = dbcmd.ExecuteReader()) {
-							while(reader.Read())
-								podcasts.Add(reader.GetString(0));
-							reader.Close();
-						}
-					}
-					// get news resources
-					using(IDbCommand dbcmd = dbcon.CreateCommand()) {
-						dbcmd.Transaction = transaction;
-						dbcmd.CommandText = "SELECT data FROM resource WHERE owner_id=@id AND type='news' AND data IS NOT NULL";
-						dbcmd.Parameters.Add(new SqliteParameter("id", id));
-						using(IDataReader reader = dbcmd.ExecuteReader()) {
-							while(reader.Read())
-								newss.Add(reader.GetString(0));
-							reader.Close();
-						}
-					}
-
 					// delete rights for remove resources
 					using(IDbCommand dbcmd = dbcon.CreateCommand()) {
 						dbcmd.Transaction = transaction;
@@ -2198,15 +2190,6 @@ namespace Webnapperon2.User
 			// delete attached storages
 			foreach(string storage_id in storages)
 				storage.DeleteStorage(storage_id);
-			// delete attached picasas
-			foreach(string picasa_id in picasas)
-				picasa.DeletePicasa(Convert.ToInt64(picasa_id));
-			// delete attached podcasts
-			foreach(string podcast_id in podcasts)
-				podcast.DeletePodcast(Convert.ToInt64(podcast_id));
-			// delete attached newss
-			foreach(string news_id in newss)
-				news.DeleteNews(Convert.ToInt64(news_id));
 
 			foreach(string contact in contacts)
 				OnUserChanged(contact);
@@ -2393,18 +2376,21 @@ namespace Webnapperon2.User
 					}
 
 					// if first created user, set the admin flags
-					bool needAdmin = false;
-					using(IDbCommand dbcmd = dbcon.CreateCommand()) {
-						dbcmd.Transaction = transaction;
-						dbcmd.CommandText = "SELECT COUNT(id) FROM user";
-						needAdmin = (Convert.ToInt64(dbcmd.ExecuteScalar()) == 1);
-					}
-					if(needAdmin) {
+					if(isNewDatabase) {
+						bool needAdmin = false;
 						using(IDbCommand dbcmd = dbcon.CreateCommand()) {
 							dbcmd.Transaction = transaction;
-							dbcmd.CommandText = "UPDATE user SET admin=1 WHERE id=@user";
-							dbcmd.Parameters.Add(new SqliteParameter("user", user));
-							dbcmd.ExecuteNonQuery();
+							dbcmd.CommandText = "SELECT COUNT(id) FROM user";
+							needAdmin = (Convert.ToInt64(dbcmd.ExecuteScalar()) == 1);
+						}
+						if(needAdmin) {
+							using(IDbCommand dbcmd = dbcon.CreateCommand()) {
+								dbcmd.Transaction = transaction;
+								dbcmd.CommandText = "UPDATE user SET admin=1 WHERE id=@user";
+								dbcmd.Parameters.Add(new SqliteParameter("user", user));
+								dbcmd.ExecuteNonQuery();
+							}
+							isNewDatabase = false;
 						}
 					}
 

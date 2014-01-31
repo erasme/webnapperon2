@@ -5,7 +5,7 @@ Wn.ResourceCreator.extend('Picasa.Creator', {
 		Ui.App.current.getUser().createResource({
 			type: 'picasa',
 			name: this.getData().name,
-			data: this.getData().url
+			url: this.getData().url
 		});
 		this.done();
 	}

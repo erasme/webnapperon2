@@ -65,7 +65,7 @@ Core.Object.extend('Wn.Message', {
 	},
 
 	getSeen: function() {
-		return this.message.seen != -1;
+		return this.message.seen !== -1;
 	},
 
 	getDate: function() {

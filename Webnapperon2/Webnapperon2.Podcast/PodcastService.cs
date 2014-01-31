@@ -5,7 +5,7 @@
 // Author(s):
 //  Daniel Lacroix <dlacroix@erasme.org>
 // 
-// Copyright (c) 2013 Departement du Rhone
+// Copyright (c) 2013-2014 Departement du Rhone
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -40,10 +40,11 @@ using Erasme.Json;
 using Erasme.Cloud;
 using Erasme.Cloud.Logger;
 using Erasme.Cloud.Storage;
+using Webnapperon2.User;
 
 namespace Webnapperon2.Podcast
 {
-	public class PodcastService: IDisposable
+	public class PodcastService
 	{
 		StorageService storageService;
 		ILogger logger;
@@ -51,36 +52,14 @@ namespace Webnapperon2.Podcast
 		object instanceLock = new object();
 		Dictionary<string,Task> runningTasks = new Dictionary<string, Task>();
 
-		IDbConnection dbcon;
-
 		public PodcastService(string basePath, StorageService storageService, TaskFactory longRunningTaskFactory, ILogger logger)
 		{
 			this.storageService = storageService;
 			this.longRunningTaskFactory = longRunningTaskFactory;
 			this.logger = logger;
-
-			if(!Directory.Exists(basePath))
-				Directory.CreateDirectory(basePath);
-
-			bool createNeeded = !File.Exists(basePath+"/podcast.db");
-
-			dbcon = (IDbConnection) new SqliteConnection("URI=file:"+basePath+"/podcast.db");
-			dbcon.Open();
-
-			if(createNeeded) {
-				// create the message table
-				using(IDbCommand dbcmd = dbcon.CreateCommand()) {
-					string sql = "CREATE TABLE podcast (id INTEGER PRIMARY KEY AUTOINCREMENT, url VARCHAR, storage VARCHAR, utime INTEGER, failcount INTEGER DEFAULT 0)";
-					dbcmd.CommandText = sql;
-					dbcmd.ExecuteNonQuery();
-				}
-			}
-			// disable disk sync.
-			using(IDbCommand dbcmd = dbcon.CreateCommand()) {
-				dbcmd.CommandText = "PRAGMA synchronous=0";
-				dbcmd.ExecuteNonQuery();
-			}
 		}
+
+		public UserService UserService { get; set; }
 
 		public bool IsUrlValid(string rss)
 		{
@@ -88,143 +67,60 @@ namespace Webnapperon2.Podcast
 			return true;
 		}
 
-		public long CreatePodcast(string url)
+		public void CreatePodcast(JsonValue data)
 		{
+			if(!data.ContainsKey("url"))
+				throw new WebException(400, 1, "RSS URL is NEEDED to create Podcast album");
+			string url = (string)data["url"];
 			if(!IsUrlValid(url))
-				throw new WebException(400, 1, "RSS URL is not a valid podcast");
+				throw new WebException(400, 1, "RSS URL is not a valid Podcast album");
 
-			long podcastId = -1;
 			// create a corresponding storage
 			string storageId = storageService.CreateStorage(-1);
+			JsonValue json = new JsonObject();
+			json["url"] = url;
+			json["utime"] = 0;
+			json["failcount"] = 0;
 
-			lock(dbcon) {
-				using(IDbTransaction transaction = dbcon.BeginTransaction()) {
-					// insert into podcast table
-					using(IDbCommand dbcmd = dbcon.CreateCommand()) {
-						dbcmd.Transaction = transaction;
-						dbcmd.CommandText = "INSERT INTO podcast (storage,url,utime) VALUES (@storage, @url,NULL)";
-						dbcmd.Parameters.Add(new SqliteParameter("storage", storageId));
-						dbcmd.Parameters.Add(new SqliteParameter("url", url));
-						int count = dbcmd.ExecuteNonQuery();
-						if(count != 1)
-							throw new Exception("Create Podcast fails");
-					}
-					// get the insert id
-					using(IDbCommand dbcmd = dbcon.CreateCommand()) {
-						dbcmd.Transaction = transaction;
-						dbcmd.CommandText = "SELECT last_insert_rowid()";
-						podcastId = Convert.ToInt64(dbcmd.ExecuteScalar());
-					}
-					transaction.Commit();
-				}
-			}
-			return podcastId;
+			data["storage_id"] = storageId;
+			data["data"] = json.ToString();
 		}
 
-		public void DeletePodcast(long id)
+		public void GetPodcast(string id, JsonValue data)
 		{
-			string storageId = null;
-
-			lock(dbcon) {
-				using(IDbTransaction transaction = dbcon.BeginTransaction()) {
-					// select storage in the podcast table
-					using(IDbCommand dbcmd = dbcon.CreateCommand()) {
-						dbcmd.Transaction = transaction;
-						dbcmd.CommandText = "SELECT storage FROM podcast WHERE id=@id";
-						dbcmd.Parameters.Add(new SqliteParameter("id", id));
-						object res = dbcmd.ExecuteScalar();
-						if(res == null)
-							throw new WebException(404, 1, "Delete Podcast fails, album not found");
-						storageId = Convert.ToString(res);
-					}
-					// delete the album
-					using(IDbCommand dbcmd = dbcon.CreateCommand()) {
-						dbcmd.Transaction = transaction;
-						dbcmd.CommandText = "DELETE FROM podcast WHERE id=@id";
-						dbcmd.Parameters.Add(new SqliteParameter("id", id));
-						dbcmd.ExecuteNonQuery();
-					}
-					transaction.Commit();
-				}
-			}
-			// delete the corresponding storage
-			storageService.DeleteStorage(storageId);
+			JsonValue json = JsonValue.Parse(data["data"]);
+			data["url"] = json["url"];
+			data["utime"] = json["utime"];
+			data["failcount"] = json["failcount"];
+			long utime = (long)data["utime"];
+			if(utime != 0)
+				data["delta"] = (DateTime.UtcNow - (new DateTime(utime * 10000))).TotalSeconds;
+			else
+				data["delta"] = 0;
+			((JsonObject)data).Remove("data");
 		}
 
-		public bool GetPodcastInfo(long id, out string storage, out string url, out long utime, out int failcount, out double delta)
+		public void ChangePodcast(string id, JsonValue data, JsonValue diff)
 		{
-			storage = null;
-			url = null;
-			utime = 0;
-			failcount = 0;
-			delta = 0;
+			if(diff.ContainsKey("url") || diff.ContainsKey("utime") || diff.ContainsKey("failcount")) {
+				JsonValue json = new JsonObject();
 
-			lock(dbcon) {
-				using(IDbTransaction transaction = dbcon.BeginTransaction()) {
-					// select storage in the podcast table
-					using(IDbCommand dbcmd = dbcon.CreateCommand()) {
-						dbcmd.Transaction = transaction;
-						dbcmd.CommandText = "SELECT storage,url,strftime('%s',utime),failcount,(julianday(datetime('now'))-julianday(utime))*24*3600 FROM podcast WHERE id=@id";
-						dbcmd.Parameters.Add(new SqliteParameter("id", id));
-						using(IDataReader reader = dbcmd.ExecuteReader()) {
-							if(!reader.Read())
-								return false;
-							storage = reader.GetString(0);
-							url = reader.GetString(1);
-							if(reader.IsDBNull(2))
-								utime = 0;
-							else
-								utime = Convert.ToInt64(reader.GetString(2));
-							failcount = reader.GetInt32(3);
-							if(reader.IsDBNull(4))
-								delta = 0;
-							else
-								delta = reader.GetDouble(4);
-						}
-					}
-					transaction.Commit();
-				}
+				if(diff.ContainsKey("url"))
+					json["url"] = diff["url"];
+				else
+					json["url"] = data["url"];
+				if(diff.ContainsKey("utime"))
+					json["utime"] = (long)diff["utime"];
+				else
+					json["utime"] = data["utime"];
+				if(diff.ContainsKey("failcount"))
+					json["failcount"] = diff["failcount"];
+				else
+					json["failcount"] = data["failcount"];
+				diff["data"] = json.ToString();
 			}
-			return true;
-		}
-
-		public JsonValue GetPodcast(long id)
-		{
-			JsonValue res = new JsonObject();
-			res["id"] = id;
-			string storage = null;
-			string url = null;
-			long utime = 0;
-			int failcount = 0;
-			double delta = 0;
-			if(!GetPodcastInfo(id, out storage, out url, out utime, out failcount, out delta))
-				throw new WebException(404, 0, "Podcast album not found");
-			else {
-				res["storage"] = storage;
-				res["url"] = url;
-				res["utime"] = utime;
-				res["failcount"] = failcount;
-				res["delta"] = delta;
-			}
-			return res;
-		}
-
-		public void GetPodcast(long id, JsonValue value, string filterBy)
-		{
-			string storage = null;
-			string url = null;
-			long utime = 0;
-			int failcount = 0;
-			double delta = 0;
-			if(!GetPodcastInfo(id, out storage, out url, out utime, out failcount, out delta))
-				throw new WebException(404, 0, "Podcast album not found");
-			else {
-				value["storage"] = storage;
-				value["url"] = url;
-				value["utime"] = utime;
-				value["failcount"] = failcount;
-				value["delta"] = delta;
-			}
+			else if(diff.ContainsKey("data"))
+				((JsonObject)diff).Remove("data");
 		}
 
 		struct PodcastElement
@@ -234,138 +130,97 @@ namespace Webnapperon2.Podcast
 			public XElement Item;
 		}
 
-		void UpdatePodcast(long id)
+		void UpdatePodcast(string id)
 		{
-			string storage = null;
-			string url = null;
-			long utime = 0;
-			int failcount = 0;
-			double delta = 0;
+			JsonValue data = UserService.GetResource(id);
+			if(data == null)
+				return;
 
-			if(GetPodcastInfo(id, out storage, out url, out utime, out failcount, out delta)) {
-				List<PodcastElement> newItems = new List<PodcastElement>();
-				Dictionary<string, JsonValue> storageItems = new Dictionary<string, JsonValue>();
+			string storage = data["storage_id"];
+			string url = data["url"];
 
-				// get storage infos
-				JsonValue ts = storageService.GetFileInfo(storage, 0, 1);
-				if(ts.ContainsKey("children")) {
-					JsonArray children = (JsonArray)ts["children"];
-					foreach(JsonValue child in children) {
-						if(child.ContainsKey("meta")) {
-							JsonValue meta = child["meta"];
-							if(meta.ContainsKey("podcastGuid"))
-								storageItems[(string)meta["podcastGuid"]] = child;
-						}
+			List<PodcastElement> newItems = new List<PodcastElement>();
+			Dictionary<string, JsonValue> storageItems = new Dictionary<string, JsonValue>();
+
+			// get storage infos
+			JsonValue ts = storageService.GetFileInfo(storage, 0, 1);
+			if(ts == null)
+				return;
+
+			if(ts.ContainsKey("children")) {
+				JsonArray children = (JsonArray)ts["children"];
+				foreach(JsonValue child in children) {
+					if(child.ContainsKey("meta")) {
+						JsonValue meta = child["meta"];
+						if(meta.ContainsKey("podcastGuid"))
+							storageItems[(string)meta["podcastGuid"]] = child;
 					}
 				}
+			}
 
-				// get the RSS
-				using(WebRequest request = new WebRequest(url, allowAutoRedirect: true)) {
-					HttpClientResponse response = request.GetResponse();
+			// get the RSS
+			using(WebRequest request = new WebRequest(url, allowAutoRedirect: true)) {
+				HttpClientResponse response = request.GetResponse();
 
-					XElement root = XElement.Load(response.InputStream);
+				XElement root = XElement.Load(response.InputStream);
 
-					int position = 0;
-					foreach(XElement item in root.Element("channel").Elements("item")) {
-						// limit to only 4 podcasts
-						if(position++ >= 4)
-							break;
+				int position = 0;
+				foreach(XElement item in root.Element("channel").Elements("item")) {
+					// limit to only 4 podcasts
+					if(position++ >= 4)
+						break;
 
-						// get unique id of the item
-						string guid = item.Element("guid").Value;
+					// get unique id of the item
+					string guid = item.Element("guid").Value;
 
-						XElement content = item.Element("enclosure");
-						if(content != null) {
-							if(storageItems.ContainsKey(guid))
-								storageItems[guid]["seen"] = true;
-							else {
-								PodcastElement p = new PodcastElement();
-								p.Guid = guid;
-								p.Item = item;
-								p.Content = content;
-								newItems.Add(p);
+					XElement content = item.Element("enclosure");
+					if(content != null) {
+						if(storageItems.ContainsKey(guid))
+							storageItems[guid]["seen"] = true;
+						else {
+							PodcastElement p = new PodcastElement();
+							p.Guid = guid;
+							p.Item = item;
+							p.Content = content;
+							newItems.Add(p);
 							}
-							//Console.WriteLine("item guid: "+guid+", url: "+content.Attribute("url").Value);
-						}
+						//Console.WriteLine("item guid: "+guid+", url: "+content.Attribute("url").Value);
 					}
 				}
-				newItems.Reverse();
-				// create new items
-				//Console.WriteLine("NEW ITEMS: "+newItems.Count);
-				foreach(PodcastElement p in newItems) {
-					JsonValue define = new JsonObject();
-					JsonValue meta = new JsonObject();
-					define["position"] = (double)0;
-					define["meta"] = meta;
-					meta["podcastGuid"] = p.Guid;
-					storageService.CreateFileFromUrl(
-						storage, 0, p.Item.Element("title").Value, p.Content.Attribute("type").Value,
-						p.Content.Attribute("url").Value, define, true);
-				}
-				// delete items
-				if(ts.ContainsKey("children")) {
-					JsonArray children = (JsonArray)ts["children"];
-					foreach(JsonValue child in children) {
-						if(!child.ContainsKey("seen"))
-							storageService.DeleteFile(storage, (long)child["id"]);
-					}
+			}
+			newItems.Reverse();
+			// create new items
+			//Console.WriteLine("NEW ITEMS: "+newItems.Count);
+			foreach(PodcastElement p in newItems) {
+				JsonValue define = new JsonObject();
+				JsonValue meta = new JsonObject();
+				define["position"] = (double)0;
+				define["meta"] = meta;
+				meta["podcastGuid"] = p.Guid;
+				storageService.CreateFileFromUrl(
+					storage, 0, p.Item.Element("title").Value, p.Content.Attribute("type").Value,
+					p.Content.Attribute("url").Value, define, true);
+			}
+			// delete items
+			if(ts.ContainsKey("children")) {
+				JsonArray children = (JsonArray)ts["children"];
+				foreach(JsonValue child in children) {
+					if(!child.ContainsKey("seen"))
+						storageService.DeleteFile(storage, (long)child["id"]);
 				}
 			}
 			// update podcast update values
-			lock(dbcon) {
-				using(IDbTransaction transaction = dbcon.BeginTransaction()) {
-					// update the podcast table
-					using(IDbCommand dbcmd = dbcon.CreateCommand()) {
-						dbcmd.Transaction = transaction;
-						dbcmd.CommandText = "UPDATE podcast SET utime=datetime('now'),failcount=0 WHERE id=@id";
-						dbcmd.Parameters.Add(new SqliteParameter("id", id));
-						dbcmd.ExecuteNonQuery();
-					}
-					transaction.Commit();
-				}
-			}
+			JsonValue diff = new JsonObject();
+			diff["failcount"] = 0;
+			diff["utime"] = (long)(DateTime.UtcNow.Ticks / 10000);
+			UserService.ChangeResource(id, diff, null);
 		}
 
-		int IncrementUpdateFail(long id)
-		{
-			int failcount = -1;
-			try {
-				// update podcast update values
-				lock(dbcon) {
-					using(IDbTransaction transaction = dbcon.BeginTransaction()) {
-						// get the podcast failcount
-						using(IDbCommand dbcmd = dbcon.CreateCommand()) {
-							dbcmd.Transaction = transaction;
-							dbcmd.CommandText = "SELECT failcount FROM podcast WHERE id=@id";
-							dbcmd.Parameters.Add(new SqliteParameter("id", id));
-							object res = dbcmd.ExecuteScalar();
-							if(res != null)
-								failcount = Convert.ToInt32(res);
-						}
-						if(failcount >= 0) {
-							failcount++;
-							// update the podcast table fail counter
-							using(IDbCommand dbcmd = dbcon.CreateCommand()) {
-								dbcmd.Transaction = transaction;
-								dbcmd.CommandText = "UPDATE podcast SET failcount=@failcount WHERE id=@id";
-								dbcmd.Parameters.Add(new SqliteParameter("failcount", failcount));
-								dbcmd.Parameters.Add(new SqliteParameter("id", id));
-								dbcmd.ExecuteNonQuery();
-							}
-						}
-						transaction.Commit();
-					}
-				}
-			}
-			catch(Exception) {
-				failcount = -1;
-			}
-			return failcount;
-		}
-
-		public void QueueUpdatePodcast(long id)
+		public void QueueUpdatePodcast(JsonValue data)
 		{
 			Task task = null;
+			string id = data["id"];
+			long failcount = data["failcount"];
 			lock(instanceLock) {
 				if(!runningTasks.ContainsKey(id.ToString())) {
 					task = new Task(delegate {
@@ -373,9 +228,12 @@ namespace Webnapperon2.Podcast
 							UpdatePodcast(id);
 						}
 						catch(Exception e) {
+							logger.Log(LogLevel.Error, "Error while processing Podcast update for album "+id+": "+e.ToString());
 							// mark the fail in the db
-							IncrementUpdateFail(id);
-							logger.Log(LogLevel.Error, "Error while processing Podcast update for "+id+": "+e.ToString());
+							JsonValue diff = new JsonObject();
+							diff["failcount"] = failcount + 1;
+							UserService.ChangeResource(id, diff, null);
+
 						} finally {
 							// remove the task
 							lock(instanceLock) {
@@ -389,15 +247,6 @@ namespace Webnapperon2.Podcast
 			}
 			if(task != null)
 				task.Start(longRunningTaskFactory.Scheduler);
-		}
-
-		public void Dispose()
-		{
-			if(dbcon != null) {
-				dbcon.Close();
-				dbcon.Dispose();
-				dbcon = null;
-			}
 		}
 	}
 }

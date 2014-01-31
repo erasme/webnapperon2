@@ -69,24 +69,14 @@ Ui.LBox.extend('Wn.ContactNewMessage', {
 
 	onButtonPress: function() {
 		this.text = this.textfield.getValue();
-
-		this.request = new Core.HttpRequest({
-			method: 'POST',
-			url: '/cloud/message',
-			content: JSON.stringify({ content: this.text, type: 'message', origin: this.user.getId(), destination: this.contact.getId() })
-		});
+		this.request = this.user.sendMessage(this.contact, this.text);
 		this.connect(this.request, 'done', this.onRequestDone);
 		this.connect(this.request, 'error', this.onRequestError);
-		this.request.send();
-
-		// ask for a message update for low speed network
-		// with websocket problems
-		this.user.updateMessages();
-
 		this.disable();
 	},
 
 	onRequestDone: function() {
+		console.log(this+'.onRequestDone');
 		this.fireEvent('new', this, this.text);
 		this.textfield.setValue('');
 		this.enable();
@@ -94,6 +84,8 @@ Ui.LBox.extend('Wn.ContactNewMessage', {
 	},
 
 	onRequestError: function() {
+		console.log(this+'.onRequestError');
+
 		this.textfield.setValue('');
 		this.enable();
 		// TODO: signal error while sending
@@ -314,10 +306,7 @@ Ui.Dialog.extend('Wn.ContactMessagesDialog', {
 		this.messagesView = new Ui.VBox({ spacing: 10 });
 		vbox.append(this.messagesView);
 
-		this.messages = [];
-
-		this.connect(this, 'visible', this.onViewVisible);
-		this.connect(this, 'hidden', this.onViewHidden);
+		this.updateMessages();
 	},
 
 	updateMessages: function() {
@@ -345,16 +334,7 @@ Ui.Dialog.extend('Wn.ContactMessagesDialog', {
 	onGetMessagesError: function() {
 		this.messagesRequest = undefined;
 	},
-
-	onViewVisible: function() {
-		this.connect(this.user, 'messageschange', this.updateMessages);
-		this.updateMessages();
-	},
-
-	onViewHidden: function() {
-		this.disconnect(this.user, 'messageschange', this.updateMessages);
-	},
-
+	
 	findMessageView: function(message) {
 		for(var i = 0; i < this.messagesView.getChildren().length; i++) {
 			if(Wn.UserMessageView.hasInstance(this.messagesView.getChildren()[i]) &&
@@ -365,6 +345,9 @@ Ui.Dialog.extend('Wn.ContactMessagesDialog', {
 	},
 
 	updateMessagesView: function() {
+		if(this.messages === undefined)
+			return;
+
 		var markMessages = [];
 		var all = this.messages;
 
@@ -420,5 +403,32 @@ Ui.Dialog.extend('Wn.ContactMessagesDialog', {
 		}
 		for(var i = 0; i < markMessages.length; i++)
 			markMessages[i].markSeen();
+	},
+
+	onMessagesChange: function() {
+		if(this.messages === undefined)
+			return;
+		var userMessages = this.user.getMessages();
+		for(var i = userMessages.length-1; i >= 0 ; i--) {
+			var userMessage = userMessages[i];
+			var found = undefined;
+			for(var i2 = 0; (found === undefined) && (i2 < this.messages.length); i2++) {
+				if(this.messages[i2].getId() === userMessage.getId())
+					found = this.messages[i2];
+			}
+			if(found === undefined)
+				this.messages.unshift(userMessage);
+		}
+		this.updateMessagesView();
+	}
+}, {
+	onLoad: function() {
+		Wn.ContactMessagesDialog.base.onLoad.apply(this, arguments);
+		this.connect(this.user, 'messageschange', this.onMessagesChange);
+	},
+
+	onUnload: function() {
+		Wn.ContactMessagesDialog.base.onUnload.apply(this, arguments);
+		this.disconnect(this.user, 'messageschange', this.onMessagesChange);
 	}
 });

@@ -143,23 +143,11 @@ Ui.Dialog.extend('Wn.VideoConfDialog', {
 	},
 	
 	onQueueOpen: function() {
-		if(this.isCaller) {
+		if(this.isCaller)
 			// send a message to the contact			
-			request = new Core.HttpRequest({
-				method: 'POST',
-				url: '/cloud/message',
-				content: JSON.stringify({
-					content: this.channel,
-					type: 'call',
-					origin: this.user.getId(),
-					destination: this.contact.getId(),
-					persist: false })
-			});
-			request.send();
-		}
-		else {
+			this.user.sendMessage(this.contact, this.channel, 'call');
+		else
 			this.queue.sendMessage({ 'user': this.user.getId(), 'event': 'accept' });
-		}
 	},
 	
 	onQueueClose: function() {

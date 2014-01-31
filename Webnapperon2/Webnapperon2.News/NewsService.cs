@@ -5,7 +5,7 @@
 // Author(s):
 //  Daniel Lacroix <dlacroix@erasme.org>
 // 
-// Copyright (c) 2013 Departement du Rhone
+// Copyright (c) 2013-2014 Departement du Rhone
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -36,17 +36,17 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Collections.Generic;
-using Mono.Data.Sqlite;
 using Erasme.Http;
 using Erasme.Json;
 using Erasme.Cloud;
 using Erasme.Cloud.Logger;
 using Erasme.Cloud.Storage;
 using NReadability;
+using Webnapperon2.User;
 
 namespace Webnapperon2.News
 {
-	public class NewsService: IDisposable
+	public class NewsService
 	{
 		StorageService storageService;
 		ILogger logger;
@@ -55,37 +55,15 @@ namespace Webnapperon2.News
 		object instanceLock = new object();
 		Dictionary<string,Task> runningTasks = new Dictionary<string, Task>();
 
-		IDbConnection dbcon;
-
 		public NewsService(string basePath, StorageService storageService, string temporaryDirectory, TaskFactory longRunningTaskFactory, ILogger logger)
 		{
 			this.storageService = storageService;
 			this.temporaryDirectory = temporaryDirectory;
 			this.longRunningTaskFactory = longRunningTaskFactory;
 			this.logger = logger;
-
-			if(!Directory.Exists(basePath))
-				Directory.CreateDirectory(basePath);
-
-			bool createNeeded = !File.Exists(basePath + "/news.db");
-
-			dbcon = (IDbConnection) new SqliteConnection("URI=file:"+basePath+"/news.db");
-			dbcon.Open();
-
-			if(createNeeded) {
-				// create the message table
-				using(IDbCommand dbcmd = dbcon.CreateCommand()) {
-					string sql = "CREATE TABLE news (id INTEGER PRIMARY KEY AUTOINCREMENT, url VARCHAR, storage VARCHAR, utime INTEGER, failcount INTEGER DEFAULT 0, fullcontent INTEGER(1) DEFAULT 0)";
-					dbcmd.CommandText = sql;
-					dbcmd.ExecuteNonQuery();
-				}
-			}
-			// disable disk sync.
-			using(IDbCommand dbcmd = dbcon.CreateCommand()) {
-				dbcmd.CommandText = "PRAGMA synchronous=0";
-				dbcmd.ExecuteNonQuery();
-			}
 		}
+
+		public UserService UserService { get; set; }
 
 		public bool IsUrlValid(string rss)
 		{
@@ -93,151 +71,69 @@ namespace Webnapperon2.News
 			return true;
 		}
 
-		public long CreateNews(string url, bool fullcontent)
+		public void CreateNews(JsonValue data)
 		{
+			if(!data.ContainsKey("url"))
+				throw new WebException(400, 1, "RSS URL is NEEDED to create News");
+			string url = (string)data["url"];
 			if(!IsUrlValid(url))
-				throw new WebException(400, 1, "RSS URL is not a valid news");
+				throw new WebException(400, 1, "RSS URL is not a valid News");
+			bool fullcontent = false;
+			if(data.ContainsKey("fullcontent"))
+				fullcontent = data["fullcontent"];
 
-			long newsId = -1;
 			// create a corresponding storage
 			string storageId = storageService.CreateStorage(-1);
+			JsonValue json = new JsonObject();
+			json["url"] = url;
+			json["fullcontent"] = fullcontent;
+			json["utime"] = 0;
+			json["failcount"] = 0;
 
-			lock(dbcon) {
-				using(IDbTransaction transaction = dbcon.BeginTransaction()) {
-					// insert into news table
-					using(IDbCommand dbcmd = dbcon.CreateCommand()) {
-						dbcmd.Transaction = transaction;
-						dbcmd.CommandText = "INSERT INTO news (storage,url,utime,fullcontent) VALUES (@storage,@url,NULL,@fullcontent)";
-						dbcmd.Parameters.Add(new SqliteParameter("storage", storageId));
-						dbcmd.Parameters.Add(new SqliteParameter("url", url));
-						dbcmd.Parameters.Add(new SqliteParameter("fullcontent", fullcontent?1:0));
-
-						int count = dbcmd.ExecuteNonQuery();
-						if(count != 1)
-							throw new Exception("Create News fails");
-					}
-					// get the insert id
-					using(IDbCommand dbcmd = dbcon.CreateCommand()) {
-						dbcmd.Transaction = transaction;
-						dbcmd.CommandText = "SELECT last_insert_rowid()";
-						newsId = Convert.ToInt64(dbcmd.ExecuteScalar());
-					}
-					transaction.Commit();
-				}
-			}
-			return newsId;
+			data["storage_id"] = storageId;
+			data["data"] = json.ToString();
 		}
 
-		public void DeleteNews(long id)
+		public void GetNews(string id, JsonValue data)
 		{
-			string storageId = null;
-
-			lock(dbcon) {
-				using(IDbTransaction transaction = dbcon.BeginTransaction()) {
-					// select storage in the news table
-					using(IDbCommand dbcmd = dbcon.CreateCommand()) {
-						dbcmd.Transaction = transaction;
-						dbcmd.CommandText = "SELECT storage FROM news WHERE id=@id";
-						dbcmd.Parameters.Add(new SqliteParameter("id", id));
-						object res = dbcmd.ExecuteScalar();
-						if(res == null)
-							throw new WebException(404, 1, "Delete News fails, stream not found");
-						storageId = Convert.ToString(res);
-					}
-					// delete the news stream
-					using(IDbCommand dbcmd = dbcon.CreateCommand()) {
-						dbcmd.Transaction = transaction;
-						dbcmd.CommandText = "DELETE FROM news WHERE id=@id";
-						dbcmd.Parameters.Add(new SqliteParameter("id", id));
-						dbcmd.ExecuteNonQuery();
-					}
-					transaction.Commit();
-				}
-			}
-			// delete the corresponding storage
-			storageService.DeleteStorage(storageId);
+			JsonValue json = JsonValue.Parse(data["data"]);
+			data["url"] = json["url"];
+			data["fullcontent"] = json["fullcontent"];
+			data["utime"] = json["utime"];
+			data["failcount"] = json["failcount"];
+			long utime = (long)data["utime"];
+			if(utime != 0)
+				data["delta"] = (DateTime.UtcNow - (new DateTime(utime * 10000))).TotalSeconds;
+			else
+				data["delta"] = 0;
+			((JsonObject)data).Remove("data");
 		}
 
-		public bool GetNewsInfo(long id, out string storage, out string url, out long utime, out int failcount, out double delta, out bool fullcontent)
+		public void ChangeNews(string id, JsonValue data, JsonValue diff)
 		{
-			storage = null;
-			url = null;
-			utime = 0;
-			failcount = 0;
-			delta = 0;
-			fullcontent = false;
+			if(diff.ContainsKey("url") || diff.ContainsKey("utime") || diff.ContainsKey("failcount")) {
+				JsonValue json = new JsonObject();
 
-			lock(dbcon) {
-				using(IDbTransaction transaction = dbcon.BeginTransaction()) {
-					// select storage in the news table
-					using(IDbCommand dbcmd = dbcon.CreateCommand()) {
-						dbcmd.Transaction = transaction;
-						dbcmd.CommandText = "SELECT storage,url,strftime('%s',utime),failcount,(julianday(datetime('now'))-julianday(utime))*24*3600,fullcontent FROM news WHERE id=@id";
-						dbcmd.Parameters.Add(new SqliteParameter("id", id));
-						using(IDataReader reader = dbcmd.ExecuteReader()) {
-							if(!reader.Read())
-								return false;
-							storage = reader.GetString(0);
-							url = reader.GetString(1);
-							if(reader.IsDBNull(2))
-								utime = 0;
-							else
-								utime = Convert.ToInt64(reader.GetString(2));
-							failcount = reader.GetInt32(3);
-							if(reader.IsDBNull(4))
-								delta = 0;
-							else
-								delta = reader.GetDouble(4);
-							fullcontent = reader.GetInt64(5) != 0;
-						}
-					}
-					transaction.Commit();
-				}
+				if(diff.ContainsKey("url"))
+					json["url"] = diff["url"];
+				else
+					json["url"] = data["url"];
+				if(diff.ContainsKey("fullcontent"))
+					json["fullcontent"] = diff["fullcontent"];
+				else
+					json["fullcontent"] = data["fullcontent"];
+				if(diff.ContainsKey("utime"))
+					json["utime"] = (long)diff["utime"];
+				else
+					json["utime"] = data["utime"];
+				if(diff.ContainsKey("failcount"))
+					json["failcount"] = diff["failcount"];
+				else
+					json["failcount"] = data["failcount"];
+				diff["data"] = json.ToString();
 			}
-			return true;
-		}
-
-		public JsonValue GetNews(long id)
-		{
-			JsonValue res = new JsonObject();
-			res["id"] = id;
-			string storage = null;
-			string url = null;
-			long utime = 0;
-			int failcount = 0;
-			double delta = 0;
-			bool fullcontent = false;
-			if(!GetNewsInfo(id, out storage, out url, out utime, out failcount, out delta, out fullcontent))
-				throw new WebException(404, 0, "News stream not found");
-			else {
-				res["storage"] = storage;
-				res["url"] = url;
-				res["utime"] = utime;
-				res["failcount"] = failcount;
-				res["delta"] = delta;
-				res["fullcontent"] = fullcontent;
-			}
-			return res;
-		}
-
-		public void GetNews(long id, JsonValue value, string filterBy)
-		{
-			string storage = null;
-			string url = null;
-			long utime = 0;
-			int failcount = 0;
-			double delta = 0;
-			bool fullcontent = false;
-			if(!GetNewsInfo(id, out storage, out url, out utime, out failcount, out delta, out fullcontent))
-				throw new WebException(404, 0, "News stream not found");
-			else {
-				value["storage"] = storage;
-				value["url"] = url;
-				value["utime"] = utime;
-				value["failcount"] = failcount;
-				value["delta"] = delta;
-				value["fullcontent"] = fullcontent;
-			}
+			else if(diff.ContainsKey("data"))
+				((JsonObject)diff).Remove("data");
 		}
 
 		struct NewsElement
@@ -346,99 +242,100 @@ namespace Webnapperon2.News
 			return articleHtml;
 		}
 
-		void UpdateNews(long id)
+		void UpdateNews(string id)
 		{
-			string storage = null;
-			string url = null;
-			long utime = 0;
-			int failcount = 0;
-			double delta = 0;
-			bool fullcontent = false;
+			JsonValue data = UserService.GetResource(id);
+			if(data == null)
+				return;
 
-			if(GetNewsInfo(id, out storage, out url, out utime, out failcount, out delta, out fullcontent)) {
-				List<NewsElement> newItems = new List<NewsElement>();
-				Dictionary<string, JsonValue> storageItems = new Dictionary<string, JsonValue>();
+			string storage = data["storage_id"];
+			string url = data["url"];
+			bool fullcontent = data["fullcontent"];
 
-				// get storage infos
-				JsonValue ts = storageService.GetFileInfo(storage, 0, 1);
-				if(ts.ContainsKey("children")) {
-					JsonArray children = (JsonArray)ts["children"];
-					foreach(JsonValue child in children) {
-						if(child.ContainsKey("meta")) {
-							JsonValue meta = child["meta"];
-							if(meta.ContainsKey("newsGuid"))
-								storageItems[(string)meta["newsGuid"]] = child;
+			List<NewsElement> newItems = new List<NewsElement>();
+			Dictionary<string, JsonValue> storageItems = new Dictionary<string, JsonValue>();
+
+			// get storage infos
+			JsonValue ts = storageService.GetFileInfo(storage, 0, 1);
+			if(ts == null)
+				return;
+
+			if(ts.ContainsKey("children")) {
+				JsonArray children = (JsonArray)ts["children"];
+				foreach(JsonValue child in children) {
+					if(child.ContainsKey("meta")) {
+						JsonValue meta = child["meta"];
+						if(meta.ContainsKey("newsGuid"))
+							storageItems[(string)meta["newsGuid"]] = child;
+					}
+				}
+			}
+
+			// get the RSS
+			using(WebRequest request = new WebRequest(url, allowAutoRedirect: true)) {
+				HttpClientResponse response = request.GetResponse();
+				if(response.StatusCode != 200)
+					throw new Exception("RSS download fails HTTP (status: "+response.StatusCode+")");
+
+				XDocument doc = XDocument.Load(response.InputStream);
+				//XElement root = XElement.Load(stream);
+				XElement root = doc.Root;
+				XNamespace ns = doc.Root.Name.Namespace;
+				if(root.Name.LocalName == "rss") {
+					foreach(XElement item in root.Element("channel").Elements("item")) {
+						// get unique id of the item
+						string guid;
+						if(item.Element("guid") != null)
+							guid = item.Element("guid").Value;
+						else
+							guid = item.Element("link").Value;
+
+						XElement content = item.Element("description");
+						if(content != null) {
+							if(storageItems.ContainsKey(guid))
+								storageItems[guid]["seen"] = true;
+							else {
+								NewsElement p = new NewsElement();
+								p.Guid = guid;
+								if(item.Element("link") != null)
+									p.Link = item.Element("link").Value;
+								if(item.Element("pubDate") != null)
+									p.Date = item.Element("pubDate").Value;
+								p.Title = item.Element("title").Value;
+								p.Content = content.Value;
+								newItems.Add(p);
+							}
+							//Console.WriteLine("item guid: "+guid+", url: "+content.Attribute("url").Value);
 						}
 					}
 				}
-
-				// get the RSS
-				using(WebRequest request = new WebRequest(url, allowAutoRedirect: true)) {
-					HttpClientResponse response = request.GetResponse();
-					if(response.StatusCode != 200)
-						throw new Exception("RSS download fails HTTP (status: "+response.StatusCode+")");
-
-					XDocument doc = XDocument.Load(response.InputStream);
-					//XElement root = XElement.Load(stream);
-					XElement root = doc.Root;
-					XNamespace ns = doc.Root.Name.Namespace;
-					if(root.Name.LocalName == "rss") {
-						foreach(XElement item in root.Element("channel").Elements("item")) {
-							// get unique id of the item
-							string guid;
-							if(item.Element("guid") != null)
-								guid = item.Element("guid").Value;
-							else
-								guid = item.Element("link").Value;
-
-							XElement content = item.Element("description");
-							if(content != null) {
-								if(storageItems.ContainsKey(guid))
-									storageItems[guid]["seen"] = true;
-								else {
-									NewsElement p = new NewsElement();
-									p.Guid = guid;
-									if(item.Element("link") != null)
-										p.Link = item.Element("link").Value;
-									if(item.Element("pubDate") != null)
-										p.Date = item.Element("pubDate").Value;
-									p.Title = item.Element("title").Value;
-									p.Content = content.Value;
-									newItems.Add(p);
+				else if(root.Name.LocalName == "feed") {
+					foreach(XElement entry in root.Elements(ns+"entry")) {
+						// get unique id of the item
+						string guid = entry.Element(ns+"id").Value;
+						XElement content = entry.Element(ns+"content");
+						if(content != null) {
+							if(storageItems.ContainsKey(guid))
+								storageItems[guid]["seen"] = true;
+							else {
+								NewsElement p = new NewsElement();
+								p.Guid = guid;
+								foreach(XElement link in entry.Elements(ns+"link")) {
+									if((link.Attribute("rel") != null) &&
+										(link.Attribute("type") != null) &&
+										(link.Attribute("rel").Value == "alternate") &&
+										(link.Attribute("type").Value == "text/html"))
+										p.Link = link.Attribute("href").Value;
 								}
-								//Console.WriteLine("item guid: "+guid+", url: "+content.Attribute("url").Value);
+								if(entry.Element(ns+"published") != null)
+									p.Date = entry.Element(ns+"published").Value;
+								if(entry.Element(ns+"updated") != null)
+									p.Date = entry.Element(ns+"updated").Value;
+								p.Title = entry.Element(ns+"title").Value;
+								p.Content = content.Value;
+								newItems.Add(p);
 							}
 						}
-					}
-					else if(root.Name.LocalName == "feed") {
-						foreach(XElement entry in root.Elements(ns+"entry")) {
-							// get unique id of the item
-							string guid = entry.Element(ns+"id").Value;
-							XElement content = entry.Element(ns+"content");
-							if(content != null) {
-								if(storageItems.ContainsKey(guid))
-									storageItems[guid]["seen"] = true;
-								else {
-									NewsElement p = new NewsElement();
-									p.Guid = guid;
-									foreach(XElement link in entry.Elements(ns+"link")) {
-										if((link.Attribute("rel") != null) &&
-										   (link.Attribute("type") != null) &&
-										   (link.Attribute("rel").Value == "alternate") &&
-										   (link.Attribute("type").Value == "text/html"))
-											p.Link = link.Attribute("href").Value;
-									}
-									if(entry.Element(ns+"published") != null)
-										p.Date = entry.Element(ns+"published").Value;
-									if(entry.Element(ns+"updated") != null)
-										p.Date = entry.Element(ns+"updated").Value;
-									p.Title = entry.Element(ns+"title").Value;
-									p.Content = content.Value;
-									newItems.Add(p);
-								}
-							}
-						}
-
 					}
 				}
 
@@ -481,60 +378,17 @@ namespace Webnapperon2.News
 				}
 			}
 			// update news update values
-			lock(dbcon) {
-				using(IDbTransaction transaction = dbcon.BeginTransaction()) {
-					// update the news table
-					using(IDbCommand dbcmd = dbcon.CreateCommand()) {
-						dbcmd.Transaction = transaction;
-						dbcmd.CommandText = "UPDATE news SET utime=datetime('now'),failcount=0 WHERE id=@id";
-						dbcmd.Parameters.Add(new SqliteParameter("id", id));
-						dbcmd.ExecuteNonQuery();
-					}
-					transaction.Commit();
-				}
-			}
+			JsonValue diff = new JsonObject();
+			diff["failcount"] = 0;
+			diff["utime"] = (long)(DateTime.UtcNow.Ticks / 10000);
+			UserService.ChangeResource(id, diff, null);
 		}
 
-		int IncrementUpdateFail(long id)
-		{
-			int failcount = -1;
-			try {
-				// update news update values
-				lock(dbcon) {
-					using(IDbTransaction transaction = dbcon.BeginTransaction()) {
-						// get the news failcount
-						using(IDbCommand dbcmd = dbcon.CreateCommand()) {
-							dbcmd.Transaction = transaction;
-							dbcmd.CommandText = "SELECT failcount FROM news WHERE id=@id";
-							dbcmd.Parameters.Add(new SqliteParameter("id", id));
-							object res = dbcmd.ExecuteScalar();
-							if(res != null)
-								failcount = Convert.ToInt32(res);
-						}
-						if(failcount >= 0) {
-							failcount++;
-							// update the news table fail counter
-							using(IDbCommand dbcmd = dbcon.CreateCommand()) {
-								dbcmd.Transaction = transaction;
-								dbcmd.CommandText = "UPDATE news SET failcount=@failcount WHERE id=@id";
-								dbcmd.Parameters.Add(new SqliteParameter("failcount", failcount));
-								dbcmd.Parameters.Add(new SqliteParameter("id", id));
-								dbcmd.ExecuteNonQuery();
-							}
-						}
-						transaction.Commit();
-					}
-				}
-			}
-			catch(Exception) {
-				failcount = -1;
-			}
-			return failcount;
-		}
-
-		public void QueueUpdateNews(long id)
+		public void QueueUpdateNews(JsonValue data)
 		{
 			Task task = null;
+			string id = data["id"];
+			long failcount = data["failcount"];
 			lock(instanceLock) {
 				if(!runningTasks.ContainsKey(id.ToString())) {
 					task = new Task(delegate {
@@ -542,9 +396,12 @@ namespace Webnapperon2.News
 							UpdateNews(id);
 						}
 						catch(Exception e) {
+							logger.Log(LogLevel.Error, "Error while processing News update for "+id+": "+e.ToString());
 							// mark the fail in the db
-							IncrementUpdateFail(id);
-							logger.Log(LogLevel.Error, "Error while processing News update "+id+": "+e.ToString());
+							JsonValue diff = new JsonObject();
+							diff["failcount"] = failcount + 1;
+							UserService.ChangeResource(id, diff, null);
+
 						} finally {
 							// remove the task
 							lock(instanceLock) {
@@ -558,15 +415,6 @@ namespace Webnapperon2.News
 			}
 			if(task != null)
 				task.Start(longRunningTaskFactory.Scheduler);
-		}
-
-		public void Dispose()
-		{
-			if(dbcon != null) {
-				dbcon.Close();
-				dbcon.Dispose();
-				dbcon = null;
-			}
 		}
 	}
 }

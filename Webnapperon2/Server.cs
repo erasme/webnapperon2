@@ -114,13 +114,6 @@ namespace Webnapperon2
 			mapper.Add(Setup.Path+"/audio", new AudioService(Setup.Storage+"/audio/", storageService, Setup.TemporaryDirectory, Setup.DefaultCacheDuration, LongRunningTaskFactory));
 			mapper.Add(Setup.Path+"/video", new VideoService(Setup.Storage+"/video/", storageService, Setup.TemporaryDirectory, Setup.DefaultCacheDuration, LongRunningTaskFactory));
 			mapper.Add(Setup.Path+"/pdf", new PdfService(Setup.Storage+"/pdf/", storageService, Setup.TemporaryDirectory, Setup.DefaultCacheDuration, LongRunningTaskFactory));
-			PicasaService picasaService = new PicasaService(
-				Setup.Storage+"/picasa/", storageService, LongRunningTaskFactory, Logger);
-			PodcastService podcastService = new PodcastService(
-				Setup.Storage+"/podcast/", storageService, LongRunningTaskFactory, Logger);
-			NewsService newsService = new NewsService(
-				Setup.Storage+"/news/", storageService, Setup.TemporaryDirectory,
-				LongRunningTaskFactory, Logger);
 			Webnapperon2.Storage.StorageRights storageRights = new Webnapperon2.Storage.StorageRights();
 			storageService.Rights = storageRights;
 
@@ -133,6 +126,14 @@ namespace Webnapperon2
 			QueueService queueService = new QueueService();
 			mapper.Add(Setup.Path+"/queue", queueService);
 
+			PicasaService picasaService = new PicasaService(
+				Setup.Storage+"/picasa/", storageService, LongRunningTaskFactory, Logger);
+			PodcastService podcastService = new PodcastService(
+				Setup.Storage+"/podcast/", storageService, LongRunningTaskFactory, Logger);
+			NewsService newsService = new NewsService(
+				Setup.Storage+"/news/", storageService, Setup.TemporaryDirectory,
+				LongRunningTaskFactory, Logger);
+
 			// user
 			userService = new UserService(
 				Setup.ServerName, Setup.Port, Setup.PublicUrl,
@@ -144,6 +145,9 @@ namespace Webnapperon2
 			mapper.Add(Setup.Path+"/user", userService);
 			userPlugin.UserService = userService;
 			storageRights.UserService = userService;
+			picasaService.UserService = userService;
+			podcastService.UserService = userService;
+			newsService.UserService = userService;
 
 			// resource
 			mapper.Add(Setup.Path+"/resource", new ResourceService(userService));

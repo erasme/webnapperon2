@@ -15,8 +15,6 @@ Core.Object.extend('Wn.User', {
 	isReady: false,
 	messages: undefined,
 	messagesRequest: undefined,
-	messagesSocket: undefined,
-	messagesRetryTask: undefined,
 
 	constructor: function(config) {
 		this.addEvents('ready', 'delete', 'change', 'messageschange', 'serverchange', 'order', 'call');
@@ -45,8 +43,8 @@ Core.Object.extend('Wn.User', {
 
 		// handle messages
 		this.messages = [];
-		if(this.monitor)
-			this.startMessagesMonitoring();
+//		if(this.monitor)
+//			this.startMessagesMonitoring();
 	},
 
 	getIsReady: function() {
@@ -348,7 +346,7 @@ Core.Object.extend('Wn.User', {
 
 	onUserMessageReceived: function(socket, msg) {
 		msg = JSON.parse(msg);
-		if(msg.event == 'userchanged') {		
+		if(msg.event === 'userchanged') {		
 			// current user changed
 			if(msg.user == this.getId()) {
 				this.updateUser();
@@ -360,23 +358,30 @@ Core.Object.extend('Wn.User', {
 					contact.update();
 			}
 		}
-		else if(msg.event == 'resourcechanged') {
+		else if(msg.event === 'resourcechanged') {
 			// a known ressource changed
 			var resource = Wn.Resource.getResource(msg.resource, this, true);
 			if(resource !== undefined)
 				resource.update();
 		}
-		else if(msg.event == 'userdisconnected') {
+		else if(msg.event === 'userdisconnected') {
 			// a known user has disconnected
 			var contact = Wn.Contact.getContact(msg.user, true);
 			if(contact !== undefined)
 				contact.setIsOnline(false);
 		}
-		else if(msg.event == 'userconnected') {
+		else if(msg.event === 'userconnected') {
 			// a known user has connected
 			var contact = Wn.Contact.getContact(msg.user, true);
 			if(contact !== undefined)
 				contact.setIsOnline(true);
+		}
+		else if(msg.event === 'messagereceived') {
+			// we received a message
+			this.onMessagesMessageReceived(msg.message);
+		}
+		else if (msg.event === 'messagechanged') {
+			this.updateMessage(msg.message);
 		}
 		// unknown event, update everything
 		else
@@ -452,6 +457,26 @@ Core.Object.extend('Wn.User', {
 	/// Handle message
 	///////////////////////////////////////////////////////
 
+	sendMessage: function(destination, text, type) {
+		if(type === undefined)
+			type = 'message';
+		if(Wn.Contact.hasInstance(destination))
+			destination = destination.getId();
+		var persist = (type === 'message');
+
+		var request = new Core.HttpRequest({
+			method: 'POST',	url: '/cloud/message',
+			content: JSON.stringify({ content: text, type: type, origin: this.getId(), destination: destination })
+		});
+		if(type === 'message') {
+			this.connect(request, 'done', function(request) {
+				this.prependMessage(request.getResponseJSON());
+			});
+		}
+		request.send();
+		return request;
+	},
+	
 	getMessages: function() {
 		return this.messages;
 	},
@@ -468,37 +493,42 @@ Core.Object.extend('Wn.User', {
 		this.messagesRequest.send();
 	},
 
-	startMessagesMonitoring: function() {
-		this.messagesSocket = new Core.Socket({ service: '/cloud/message/'+this.id });
-		this.connect(this.messagesSocket, 'message', this.onMessagesMessageReceived);
-		this.connect(this.messagesSocket, 'error', this.onMessagesSocketError);
-		this.connect(this.messagesSocket, 'close', this.onMessagesSocketClose);
-		this.updateMessages();
+	updateMessage: function(message) {
+		// search if we known this message
+		var found = undefined;
+		for(var i2 = 0; (found == undefined) && (i2 < this.messages.length); i2++) {
+			if(message.id == this.messages[i2].getMessage().id)
+				found = this.messages[i2];
+		}
+		if(found !== undefined) {
+			found.updateData(message);
+			this.fireEvent('messageschange', this);
+		}
 	},
 
-	onMessagesSocketError: function() {
-		this.messagesSocket.close();
-	},
-
-	onMessagesSocketClose: function() {
-		this.disconnect(this.messagesSocket, 'message', this.onMessagesMessageReceived);
-		this.disconnect(this.messagesSocket, 'error', this.onMessagesSocketError);
-		this.disconnect(this.messagesSocket, 'close', this.onMessagesSocketClose);
-		this.messagesSocket = undefined;
-		this.messagesRetryTask = new Core.DelayedTask({ delay: 5, scope: this, callback: this.startMessagesMonitoring });
-	},
-
-	onMessagesMessageReceived: function(socket, message) {
-		message = JSON.parse(message);
-	
-		if((message.event == 'messagecreated') && (message.message.type == 'order'))
-			this.fireEvent('order', this, message.message);
-		else if((message.event == 'messagecreated') && (message.message.type == 'rfid'))
-			Ui.App.current.getRfidReader().fireEnter(message.message.content);
-		else if((message.event == 'messagecreated') && (message.message.type == 'call') && (message.message.origin != this.getId()))
-			this.fireEvent('call', this, Wn.Contact.getContact(message.message.origin), message.message);
+	prependMessage: function(message) {
+		// search if we already known this message
+		var found = undefined;
+		for(var i2 = 0; (found == undefined) && (i2 < this.messages.length); i2++) {
+			if(message.id == this.messages[i2].getMessage().id)
+				found = this.messages[i2];
+		}
+		if(found !== undefined)
+			found.updateData(message);
 		else
-			this.updateMessages();
+			this.messages.unshift(new Wn.Message({ message: message }));
+		this.fireEvent('messageschange', this);
+	},
+	
+	onMessagesMessageReceived: function(message) {
+		if(message.type == 'order')
+			this.fireEvent('order', this, message);
+		else if(message.type == 'rfid')
+			Ui.App.current.getRfidReader().fireEnter(message.content);
+		else if((message.type == 'call') && (message.origin !== this.getId()))
+			this.fireEvent('call', this, Wn.Contact.getContact(message.origin), message);
+		else
+			this.prependMessage(message);
 	},
 
 	onGetMessagesError: function(request) {
