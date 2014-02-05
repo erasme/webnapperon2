@@ -261,7 +261,7 @@ Ui.HBox.extend('Storage.FileViewer', {
 //			cancelButton: new Ui.Button({ text: 'Annuler' }),
 //			content: new Ui.Text({ width: 300, text: 'Voulez vous vraiment supprimer ce fichier. Il sera définitivement perdu.' })
 //		});
-//		var removeButton = new Ui.Button({ text: 'Supprimer', style: { "Ui.Button": { color: '#fa4141' } } });
+//		var removeButton = new Wn.AlertButton({ text: 'Supprimer' });
 //		this.connect(removeButton, 'press', function() {
 			if(this.file != undefined) {
 				var request = new Core.HttpRequest({ method: 'DELETE', url: '/cloud/storage/'+this.storage+'/'+this.file.id });
@@ -1089,8 +1089,6 @@ Wn.ResourceViewer.extend('Storage.BaseViewer', {
 	navigation: undefined,
 	flow: undefined,
 	updateRequest: undefined,
-	storageSocket: undefined,
-	storageRetryTask: undefined,
 	mainVbox: undefined,
 	toolsBox: undefined,
 	dropbox: undefined,
@@ -1103,7 +1101,7 @@ Wn.ResourceViewer.extend('Storage.BaseViewer', {
 	files: undefined,
 	autoplay: false,
 	autoplayButton: undefined,
-	storageRev: 0,
+	resourceRev: 0,
 	actionButtons: undefined,
 	fileActionsSeparator: undefined,
 	filePropertiesButton: undefined,
@@ -1117,22 +1115,6 @@ Wn.ResourceViewer.extend('Storage.BaseViewer', {
 		this.connect(this.filePropertiesButton, 'press', this.onPropertiesPress);
 		this.fileDownloadButton = new Ui.DownloadButton({ icon: 'savedisk' });
 		this.autoplayButton = new Ui.ToggleButton({ icon: 'chronoplay' });
-	},
-	
-	canAddFile: function() {
-		return this.getResource().canWrite();
-	},
-	
-	canDeleteFile: function() {
-		return this.getResource().canWrite();
-	},
-	
-	canModifyFile: function() {
-		return this.getResource().canWrite();
-	},
-
-	getStorage: function() {
-		return this.storage;
 	},
 
 	setStorage: function(storage) {	
@@ -1187,11 +1169,24 @@ Wn.ResourceViewer.extend('Storage.BaseViewer', {
 		
 		// load the storage content
 		this.update();
-		
-		if(this.getIsLoaded())
-			this.startStorageMonitoring();
 	},
 	
+	canAddFile: function() {
+		return this.getResource().canWrite();
+	},
+	
+	canDeleteFile: function() {
+		return this.getResource().canWrite();
+	},
+	
+	canModifyFile: function() {
+		return this.getResource().canWrite();
+	},
+
+	getStorage: function() {
+		return this.storage;
+	},
+
 	play: function() {
 		this.setAutoPlay(true);
 	},
@@ -1244,35 +1239,8 @@ Wn.ResourceViewer.extend('Storage.BaseViewer', {
 		 	// TODO: move or copy if possible
 		}
 	},
-
-	stopStorageMonitoring: function() {
-		if(this.storageSocket != undefined)
-			this.storageSocket.close();
-	},
-
-	startStorageMonitoring: function() {	
-		if(this.storageSocket === undefined) {
-			this.storageSocket = new Core.Socket({ service: '/cloud/storage/'+this.storage });
-			this.connect(this.storageSocket, 'message', this.onStorageMessageReceived);
-			this.connect(this.storageSocket, 'error', this.onStorageSocketError);
-			this.connect(this.storageSocket, 'close', this.onStorageSocketClose);
-		}
-	},
-
-	onStorageSocketError: function() {
-		this.storageSocket.close();
-	},
-
-	onStorageSocketClose: function() {
-		this.disconnect(this.storageSocket, 'message', this.onStorageMessageReceived);
-		this.disconnect(this.storageSocket, 'error', this.onStorageSocketError);
-		this.disconnect(this.storageSocket, 'close', this.onStorageSocketClose);
-		this.storageSocket = undefined;
-		if(this.getIsLoaded())
-			this.storageRetryTask = new Core.DelayedTask({ delay: 5, scope: this, callback: this.startStorageMonitoring });
-	},
-
-	onStorageMessageReceived: function(socket, msg) {
+	
+/*	onStorageMessageReceived: function(socket, msg) {
 		var json = JSON.parse(msg);
 		if(json.action === 'deleted')
 			Ui.App.current.setDefaultMain();
@@ -1280,7 +1248,7 @@ Wn.ResourceViewer.extend('Storage.BaseViewer', {
 			if(this.storageRev !== json.rev)
 				this.update();
 		}
-	},
+	},*/
 
 	update: function() {
 		if(this.updateRequest !== undefined)
@@ -1494,8 +1462,6 @@ Wn.ResourceViewer.extend('Storage.BaseViewer', {
 	},
 
 	onUpdateDone: function() {
-//		console.log(this+'.onUpdateDone');
-
 		var res = this.updateRequest.getResponseJSON();
 		this.storageRev = res.storage_rev;
 		
@@ -1517,7 +1483,6 @@ Wn.ResourceViewer.extend('Storage.BaseViewer', {
 		// update the previews
 		this.updatePreviews(res.children);
 		
-//		console.log(res.children);
 		// update the viewers
 		var remove = [];
 		for(var i = 0; i < this.carousel.getLogicalChildren().length; i++) {
@@ -1820,19 +1785,14 @@ Wn.ResourceViewer.extend('Storage.BaseViewer', {
 	}
 
 }, {
-	onLoad: function() {	
-		Storage.BaseViewer.base.onLoad.call(this);
-
-		if(this.storage !== undefined)
-			this.startStorageMonitoring();
+	onResourceChange: function() {
+		Storage.BaseViewer.base.onResourceChange.apply(this, arguments);
+		if((this.storage !== undefined) && (this.resourceRev !== this.getResource().getData().rev)) {
+			this.resourceRev = this.getResource().getData().rev;
+			this.update();
+		}
 	},
 	
-	onUnload: function() {	
-		Storage.BaseViewer.base.onUnload.call(this);
-		if(this.storage !== undefined)
-			this.stopStorageMonitoring();
-	},
-
 	onDeletePress: function() {
 		// if we cant delete files, call class parent implementation
 		if(!this.canDeleteFile()) {
@@ -1849,7 +1809,7 @@ Wn.ResourceViewer.extend('Storage.BaseViewer', {
 				cancelButton: new Ui.Button({ text: 'Annuler' }),
 				content: new Ui.Text({ text: 'Voulez vous définitivement supprimer cette ressource ?' })
 			});
-			var removeAllButton = new Ui.Button({ text: 'Supprimer', style: { "Ui.Button": { color: '#fa4141' } } });
+			var removeAllButton = new Wn.AlertButton({ text: 'Supprimer' });
 			this.connect(removeAllButton, 'press', function() {
 				dialog.close();
 				this.deleteResource();
@@ -1866,12 +1826,12 @@ Wn.ResourceViewer.extend('Storage.BaseViewer', {
 				cancelButton: new Ui.Button({ text: 'Annuler' }),
 				content: new Ui.Text({ text: 'Que voulez vous définitivement supprimer ? Le fichier actuel ou la ressource et l\'ensemble des fichiers ?' })
 			});
-			var removeButton = new Ui.Button({ text: 'Le fichier', style: { "Ui.Button": { color: '#fa4141' } } });
+			var removeButton = new Wn.AlertButton({ text: 'Le fichier' });
 			this.connect(removeButton, 'press', function() {
 				this.deleteCurrent();
 				dialog.close();
 			});
-			var removeAllButton = new Ui.Button({ text: 'Tout', style: { "Ui.Button": { color: '#fa4141' } } });
+			var removeAllButton = new Wn.AlertButton({ text: 'Tout' });
 			this.connect(removeAllButton, 'press', function() {
 				dialog.close();
 				
@@ -1883,7 +1843,7 @@ Wn.ResourceViewer.extend('Storage.BaseViewer', {
 					cancelButton: new Ui.Button({ text: 'Annuler' }),
 					content: new Ui.Text({ text: 'Voulez vraiment vous définitivement supprimer cette ressource et TOUS les fichiers ?' })
 				});
-				var removeAllButton = new Ui.Button({ text: 'Supprimer', style: { "Ui.Button": { color: '#fa4141' } } });
+				var removeAllButton = new Wn.AlertButton({ text: 'Supprimer' });
 				this.connect(removeAllButton, 'press', function() {
 					dialog2.close();
 					this.deleteResource();

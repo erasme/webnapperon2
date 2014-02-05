@@ -17,7 +17,7 @@ Ui.Dialog.extend('Wn.ResourceDeleteDialog', {
 			this.setCancelButton(new Ui.Button({ text: 'Annuler' }));
 			this.setContent(new Ui.Text({ text: 'Voulez vous vraiment supprimer cette ressource pour vous et toutes les personnes avec qui vous la partagée ?' }));
 		
-			var removeButton = new Ui.Button({ text: 'Supprimer', style: { "Ui.Button": { color: '#fa4141' } } });
+			var removeButton = new Wn.AlertButton({ text: 'Supprimer' });
 			this.connect(removeButton, 'press', function() {
 				this.close();
 				this.resource.deleteResource();
@@ -127,6 +127,8 @@ Ui.VBox.extend('Wn.ResourceViewer', {
 		
 		// if mark the resource as seen
 		this.resource.markSeenByMe();
+
+		this.user.watchResource(this.getResource());
 	},
 
 	// implement a selection handler for Selectionable elements
@@ -220,7 +222,7 @@ Ui.VBox.extend('Wn.ResourceViewer', {
 			cancelButton: new Ui.Button({ text: 'Annuler' }),
 			content: new Ui.Text({ text: 'Voulez vous vraiment supprimer cette ressource pour vous et toutes les personnes avec qui vous la partagée ?' })
 		});
-		var removeButton = new Ui.Button({ text: 'Supprimer', style: { "Ui.Button": { color: '#fa4141' } } });
+		var removeButton = new Wn.AlertButton({ text: 'Supprimer' });
 		this.connect(removeButton, 'press', function() {
 			dialog.close();
 			this.deleteResource();

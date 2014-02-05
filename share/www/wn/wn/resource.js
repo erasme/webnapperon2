@@ -199,6 +199,9 @@ Core.Object.extend('Wn.Resource', {
 		if((request.getStatus() == 404) || (request.getStatus() == 403)) {
 			this.fireEvent('delete', this);
 			this.deleted = true;
+			// auto remove the bookmark if the access is no more possible
+			if(this.getBookmark())
+				this.user.unbookmarkResource(this);
 		}
 		else
 			this.fireEvent('error', this);

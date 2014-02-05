@@ -35,7 +35,7 @@ Ui.Dialog.extend('Wn.VideoConfDialog', {
 						
 			var hbox = new Ui.HBox({ uniform: true, verticalAlign: 'center', horizontalAlign: 'center' });
 			
-			var denyButton = new Ui.Button({ text: 'Refuser', style: { "Ui.Button": { color: '#fa4141' } } });
+			var denyButton = new Wn.AlertButton({ text: 'Refuser' });
 			hbox.append(denyButton);
 			var allowButton = new Ui.Button({ text: 'Accepter', style: { "Ui.Button": { color: '#41fa41' } } });
 			hbox.append(allowButton);

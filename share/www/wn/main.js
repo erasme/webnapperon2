@@ -1,29 +1,47 @@
 
+Ui.Button.extend('Wn.InfoButton');
+
+Ui.Button.extend('Wn.AlertButton');
+
 Ui.LBox.extend('Wn.Error', {
-	delay: undefined,
+	clock: undefined,
+	progressbar: undefined,
 
 	constructor: function(config) {
-		this.setContent(new Ui.Text({
+		var vbox = new Ui.VBox({ verticalAlign: 'center' });
+		this.setContent(vbox);
+
+		vbox.append(new Ui.Text({
 			text: 'La ressource recherchée n\'a pas été trouvée',
 			margin: 20, fontSize: 20,
-			verticalAlign: 'center', textAlign: 'center'
+			textAlign: 'center'
 		}));
+
+		this.progressbar = new Ui.ProgressBar({ value: 1, horizontalAlign: 'center', width: 100 });
+		vbox.append(this.progressbar);
 	},
 
-	onTimeout: function() {
+	onProgressComplete: function() {
 		Ui.App.current.setMainPath('');
 	}
 }, {
-	onVisible: function() {
-		if(this.delay != undefined)
-			this.delay.abort();
-		this.delay = new Core.DelayedTask({ scope: this, callback: this.onTimeout, delay: 5 });
+	onLoad: function() {
+		Wn.Error.base.onLoad.apply(this, arguments);
+		this.clock = new Anim.Clock({ duration: 5.0, scope: this,
+			onTimeupdate: function(clock, progress) {
+				this.progressbar.setValue(1-progress);
+			}
+		});
+		this.connect(this.clock, 'complete', this.onProgressComplete);
+		this.clock.begin();
 	},
 
-	onHidden: function() {
-		if(this.delay != undefined) {
-			this.delay.abort();
-			this.delay = undefined;
+	onUnload: function() {
+		Wn.Error.base.onUnload.apply(this, arguments);
+		if(this.clock !== undefined) {
+			this.disconnect(this.clock, 'complete', this.onProgressComplete);
+			this.clock.stop();
+			this.clock = undefined;
 		}
 	}
 });
@@ -601,19 +619,28 @@ Ui.App.extend('Wn.App', {
 	mainbox: undefined,
 	main: undefined,
 	isFullscreen: false,
-	sessionId: undefined,
 	currentPath: undefined,
 	resource: undefined,
+	contact: undefined,
 	rfidReader: undefined,
 	reloadDialog: undefined,
 
 	constructor: function(config) {
 		this.setContent(new Ui.VBox());
-		this.sendGetAuthSession();
 		this.connect(window, 'hashchange', this.onHashChange);
 		
 		this.rfidReader = new Wn.RfidReader();
-		this.connect(this.rfidReader, 'enter', this.onRfidEnter);		
+		this.connect(this.rfidReader, 'enter', this.onRfidEnter);
+
+		// we are an admin and want to connect to as a given user
+		if(this.getArguments()['user'] != undefined) {
+			var request = new Core.HttpRequest({ url: '/cloud/user/'+this.getArguments()['user'] });
+			this.connect(request, 'done', this.onGetUserDone);
+			this.connect(request, 'error', this.onGetUserError);
+			request.send();
+		}
+		else
+			this.sendGetAuthSession();
 	},
 
 	// implement a selection handler for Selectionable elements
@@ -627,43 +654,18 @@ Ui.App.extend('Wn.App', {
 	},
 
 	sendGetAuthSession: function() {
-		var oldSession = undefined;
-		// if a session is given as argument, use it
-		if(this.getArguments()['authsession'] != undefined)
-			oldSession = this.getArguments()['authsession'];
-		// else look in the localStorage
-		else if('localStorage' in window)
-			oldSession = localStorage.getItem('authsession');
-		var url = '/cloud/authsession/';
-		if(oldSession != undefined)
-			url += encodeURIComponent(oldSession);
-		else
-			url += 'current';
-		url += '?setcookie=1';
-				
-		var request = new Core.HttpRequest({ method: 'GET', url: url });
+		var request = new Core.HttpRequest({ method: 'GET', url: '/cloud/authsession/current?setcookie=1' });
 		this.connect(request, 'done', this.onGetAuthSessionDone);
 		this.connect(request, 'error', this.onGetAuthSessionError);
 		request.send();
 	},
 
 	onGetAuthSessionError: function(req) {
-		if(('localStorage' in window) && (this.getArguments()['authsession'] == undefined))
-			localStorage.removeItem('authsession');
 		this.basicLogin();
 	},
 
 	onGetAuthSessionDone: function(req) {
 		var res = req.getResponseJSON();
-		this.sessionId = res.id;
-
-		if(('localStorage' in window) && (this.getArguments()['authsession'] == undefined)) {
-			if(localStorage.getItem('authsession') != res.id)
-				localStorage.setItem('authsession', res.id);
-		}
-		// if we connect with an argument session, use the session HTTP header
-		if((this.getArguments()['authsession'] != undefined) && (this.getArguments()['authsession'] == res.id))
-			Core.HttpRequest.setRequestHeader('X-Webnapperon-Authentication', res.id);
 		var userId = res.user;
 		var request = new Core.HttpRequest({ url: '/cloud/user/'+userId });
 		this.connect(request, 'done', this.onGetUserDone);
@@ -677,9 +679,6 @@ Ui.App.extend('Wn.App', {
 	},
 
 	onGetUserError: function(req) {
-		// delete the session from the localStorage if not valid
-		if(('localStorage' in window) && this.sessionId == localStorage.getItem('authsession'))
-			localStorage.removeItem('authsession');
 		this.basicLogin();
 	},
 
@@ -808,16 +807,22 @@ Ui.App.extend('Wn.App', {
 	},
 
 	setMainPath: function(path) {
+		//console.log(this+'.setMainPath: '+path);
+
 		if(!this.notifyMainPath(path))
 			return;
 		
-		//console.log(this+'.setMainPath: '+path);
-		
-		if(this.resource != undefined) {
+		if(this.resource !== undefined) {
 			this.disconnect(this.resource, 'error', this.onResourceError);
 			this.disconnect(this.resource, 'delete', this.onResourceError);
 			this.disconnect(this.resource, 'ready', this.onResourceReady);
 			this.resource = undefined;
+		}
+		if(this.contact !== undefined) {
+			this.disconnect(this.contact, 'error', this.onContactError);
+			this.disconnect(this.contact, 'delete', this.onContactError);
+			this.disconnect(this.contact, 'ready', this.onContactReady);
+			this.contact = undefined;
 		}
 			
 		if(path == '') {
@@ -826,8 +831,8 @@ Ui.App.extend('Wn.App', {
 		}
 		else {
 			var pos = path.indexOf(':');
-			if(pos == -1) {
-				this.setMainPath('error:notfound');
+			if(pos === -1) {
+				this.setMain(new Wn.Error());
 				return;
 			}
 			var type = path.substring(0,pos);
@@ -850,7 +855,7 @@ Ui.App.extend('Wn.App', {
 							}
 						});
 						this.connect(request, 'error', function() {
-							this.setMainPath('error:notfound');
+							this.setMain(new Wn.Error());
 						});
 						request.send();
 					}
@@ -865,11 +870,21 @@ Ui.App.extend('Wn.App', {
 				case 'user':
 					var contactId = subpath;
 					this.menu.setCurrentUser(contactId);
-					if(contactId == this.user.getId())
+					if(contactId === this.user.getId())
 						app.setMain(new Wn.UserView({ user: this.user }));
 					else {
-						var contact = Wn.Contact.getContact(contactId);
-						app.setMain(new Wn.ContactView({ user: this.user, contact: contact }));
+						this.contact = Wn.Contact.getContact(contactId);
+						if(this.contact === undefined) {
+							this.setMain(new Wn.Error());
+							return;
+						}
+						if(this.contact.getIsReady())
+							this.onContactReady();
+						else {
+							this.connect(this.contact, 'ready', this.onContactReady);
+							this.connect(this.contact, 'error', this.onContactError);
+							this.connect(this.contact, 'delete', this.onContactError);
+						}
 					}
 					break;
 				case 'resource':
@@ -889,10 +904,10 @@ Ui.App.extend('Wn.App', {
 					}
 
 					this.resource = Wn.Resource.getResource(resourceId, this.user);
-					if(this.resource == undefined) {
-						this.setMainPath('error:notfound');
+					if(this.resource === undefined) {
+						this.setMain(new Wn.Error());
 						return;
-					}					
+					}
 					if(this.resource.getIsReady())
 						this.onResourceReady();
 					else {
@@ -905,19 +920,36 @@ Ui.App.extend('Wn.App', {
 					this.setMain(new Wn.Error());
 					break;
 				default:
-					this.setMainPath('error:notfound');
+					this.setMain(new Wn.Error());
+					break;
 			}
 		}
 		if((this.isFullscreen) && ('fullscreen' in this.getMain()))
 			this.getMain().fullscreen();
 	},
-	
+
+	onContactError: function() {
+		this.disconnect(this.contact, 'error', this.onContactError);
+		this.disconnect(this.contact, 'delete', this.onContactError);
+		this.disconnect(this.contact, 'ready', this.onContactReady);
+		this.contact = undefined;
+		this.setMain(new Wn.Error());
+	},
+
+	onContactReady: function() {
+		this.disconnect(this.contact, 'error', this.onContactError);
+		this.disconnect(this.contact, 'delete', this.onContactError);
+		this.disconnect(this.contact, 'ready', this.onContactReady);
+		this.setMain(new Wn.ContactView({ user: this.user, contact: this.contact }));
+		this.contact = undefined;
+	},
+
 	onResourceError: function() {
 		this.disconnect(this.resource, 'error', this.onResourceError);
 		this.disconnect(this.resource, 'delete', this.onResourceError);
 		this.disconnect(this.resource, 'ready', this.onResourceReady);
 		this.resource = undefined;
-		this.setMainPath('error:notfound');
+		this.setMain(new Wn.Error());
 	},
 	
 	onResourceReady: function() {
@@ -928,13 +960,13 @@ Ui.App.extend('Wn.App', {
 		// check if the resource is not already loaded
 		if(Wn.ResourceViewer.hasInstance(this.main) && (this.main.getResource() == this.resource)) {
 			// change the subpath if needed
-			if(this.resourceSubpath != undefined)
+			if(this.resourceSubpath !== undefined)
 				this.main.setPath(this.resourceSubpath);
 			return;
 		}
 		var viewconst = Wn.ResourceViewer.getApplication(this.resource.getType());		
 		if(viewconst === undefined) {
-			this.setMainPath('error:notfound');
+			this.setMain(new Wn.Error());
 			return;
 		}
 		this.menu.setCurrentUser(this.resource.getOwnerId());
@@ -1022,8 +1054,8 @@ Ui.App.extend('Wn.App', {
 		}
 	},
 
-	onHashChange: function() {
-		if(location.hash.substring(1) != this.currentPath)
+	onHashChange: function(event) {
+		if(location.hash.substring(1) !== this.currentPath)
 			this.setMainPath(location.hash.substring(1));
 	},
 
@@ -1146,6 +1178,18 @@ style: {
 			background: 'rgba(250,250,250,0)',
 			iconSize: 30,
 			spacing: 6
+		}
+	},
+	"Wn.AlertButton": {
+		"Ui.ButtonGraphic": {
+			background: '#f26d7f',
+			foreground: '#910011'
+		}
+	},
+	"Wn.InfoButton": {
+		"Ui.ButtonGraphic": {
+			background: '#90a5ff',
+			foreground: '#00229f'
 		}
 	},
 	"Ui.MenuToolBarButton": {

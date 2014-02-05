@@ -38,7 +38,7 @@ Ui.Dialog.extend('Wn.ResourcePropertiesDialog', {
 		vbox.append(rfidSection);
 
 		if(Ui.App.current.getUser().isAdmin() || this.resource.canWrite()) {
-			this.deleteButton = new Ui.Button({ text: 'Supprimer', style: { "Ui.Button": { color: '#fa4141' } } });
+			this.deleteButton = new Wn.AlertButton({ text: 'Supprimer' });
 			this.connect(this.deleteButton, 'press', this.onDeletePress);
 
 			this.saveButton = new Ui.Button({ text: 'Enregistrer' });

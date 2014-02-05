@@ -378,7 +378,10 @@ namespace Webnapperon2.News
 				}
 			}
 			// update news update values
+			long quota, used, ctime, mtime, rev;
+			storageService.GetStorageInfo(storage, out quota, out used, out ctime, out mtime, out rev);
 			JsonValue diff = new JsonObject();
+			diff["rev"] = rev;
 			diff["failcount"] = 0;
 			diff["utime"] = (long)(DateTime.UtcNow.Ticks / 10000);
 			UserService.ChangeResource(id, diff, null);

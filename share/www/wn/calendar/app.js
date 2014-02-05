@@ -113,7 +113,7 @@ Ui.LBox.extend('Calendar.DayView', {
 	},
 
 	onDayItemPress: function(dayitem) {
-		console.log('onDayItemPress '+dayitem.getEvent().summary);
+		//console.log('onDayItemPress '+dayitem.getEvent().summary);
 		var detailpopup = new Calendar.EventDetail({ event: dayitem.getEvent() });
 		detailpopup.show();
 	}
@@ -143,7 +143,6 @@ Ui.LBox.extend('Calendar.DayView', {
 			hour.arrange(3+100 - hour.getMeasureWidth() - 2, (i * 1000 / 24) + 2, hour.getMeasureWidth(), hour.getMeasureHeight());
 		}
 
-		console.log('arrange items:');
 		// arrange items
 		for(var i = 0; i < this.items.length; i++) {
 			var item = this.items[i];
@@ -159,7 +158,7 @@ Ui.LBox.extend('Calendar.DayView', {
 			if(eventend > dayend)
 				eventend = dayend;
 
-			console.log('start: '+eventstart+', end: '+eventend+', day: '+this.day);
+			//console.log('start: '+eventstart+', end: '+eventend+', day: '+this.day);
 
 			var starty = (eventstart.getTime() - this.day.getTime()) / (24 * 60 * 60 * 1000);
 			var endy = (eventend.getTime() - this.day.getTime()) / (24 * 60 * 60 * 1000);
@@ -215,7 +214,7 @@ Core.Object.extend('Calendar.Data', {
 				}
 			}
 		}
-		console.log('NB LINES: '+lines.length);
+		//console.log('NB LINES: '+lines.length);
 	},
 
 	parseDate: function(str) {
@@ -229,7 +228,7 @@ Core.Object.extend('Calendar.Data', {
 	},
 
 	searchDay: function(day) {
-		console.log('search for day: '+day);
+		//console.log('search for day: '+day);
 
 		var daystart = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 0, 0, 0, 0);
 		var dayend = new Date(daystart.getTime() + (24 * 60 * 60 * 1000));
@@ -255,8 +254,11 @@ Wn.ResourceViewer.extend('Calendar.App', {
 	dayview: undefined,
 	currentDay: undefined,
 	dateLabel: undefined,
+	tools: undefined,
 
 	constructor: function(config) {
+		this.tools = [];
+
 		this.vbox = new Ui.VBox();
 		this.setContent(this.vbox);
 
@@ -264,15 +266,18 @@ Wn.ResourceViewer.extend('Calendar.App', {
 		this.vbox.append(hbox);
 
 		var button = new Ui.Button({ text: 'Aujourd\'hui'});
-		hbox.append(button);
+		this.tools.push(button);
+		//hbox.append(button);
 		this.connect(button, 'press', this.onTodayPress);
 
 		button = new Ui.Button({ icon: 'arrowleft'});
-		hbox.append(button);
+		this.tools.push(button);
+		//hbox.append(button);
 		this.connect(button, 'press', this.onPreviousPress);
 
 		button = new Ui.Button({ icon: 'arrowright'});
-		hbox.append(button);
+		this.tools.push(button);
+		//hbox.append(button);
 		this.connect(button, 'press', this.onNextPress);
 
 		this.dateLabel = new Ui.Label({ horizontalAlign: 'center', fontSize: 20 });
@@ -289,14 +294,16 @@ Wn.ResourceViewer.extend('Calendar.App', {
 		this.dayview = new Calendar.DayView();
 		this.scroll.setContent(this.dayview);
 
-		this.request = new Core.HttpRequest({ url: '/cloud/proxy?url='+encodeURIComponent(this.getResource().getData()) });
+		this.request = new Core.HttpRequest({ url: '/cloud/proxy?url='+encodeURIComponent(this.getResource().getData().data) });
 		this.connect(this.request, 'done', this.onGetCalendarDone);
 		this.connect(this.request, 'error', this.onGetCalendarError);
 		this.request.send();
+
+		this.setActionButtons(this.tools);
 	},
 
 	onGetCalendarDone: function(request) {
-		console.log('Calendar DONE');
+		//console.log('Calendar DONE');
 
 		var text = request.getResponseText();
 		this.data = new Calendar.Data({ text: text });

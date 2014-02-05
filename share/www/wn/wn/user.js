@@ -11,6 +11,7 @@ Core.Object.extend('Wn.User', {
 	userRetryTask: undefined,
 	monitor: true,
 	serverVersion: undefined,
+	watchedResource: undefined,
 
 	isReady: false,
 	messages: undefined,
@@ -104,6 +105,12 @@ Core.Object.extend('Wn.User', {
 			}
 		}
 		return undefined;
+	},
+
+	watchResource: function(resource) {
+		this.watchedResource = resource;
+		if(this.userSocketAlive)
+			this.userSocket.send(JSON.stringify({ type: 'watch', resource: this.watchedResource.getId() }));
 	},
 
 	getResource: function(id) {
@@ -324,6 +331,8 @@ Core.Object.extend('Wn.User', {
 		// update the user is case thing has changed since our last
 		// update before the user service WebSocket connection
 		this.updateUser();
+		if(this.watchedResource !== undefined)
+			this.userSocket.send(JSON.stringify({ type: 'watch', resource: this.watchedResource.getId() }));
 	},
 
 	onUserSocketError: function() {
@@ -363,6 +372,9 @@ Core.Object.extend('Wn.User', {
 			var resource = Wn.Resource.getResource(msg.resource, this, true);
 			if(resource !== undefined)
 				resource.update();
+			if((this.watchedResource !== null) && (this.watchedResource !== undefined) &&
+			   (resource !== this.watchedResource) && (this.watchedResource.getId() === msg.resource))
+			   this.watchedResource.update();
 		}
 		else if(msg.event === 'userdisconnected') {
 			// a known user has disconnected

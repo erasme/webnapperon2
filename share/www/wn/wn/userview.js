@@ -18,10 +18,8 @@ Ui.LBox.extend('Wn.UserResourcesView', {
 		delete(config.user);
 
 		// resources part
-		//this.resources = new Ui.Flow({ uniform: true, verticalAlign: 'top' });
 		this.resources = new Wn.UserResourcesFlow({ verticalAlign: 'top' });
 		this.resources.addMimetype('Wn.ResourceView');
-//		this.resources.addMimetype('application/x-wn2-resource');
 		this.setContent(this.resources);
 		this.connect(this.resources, 'dropat', this.onResourceDropAt);
 
@@ -82,8 +80,6 @@ Ui.LBox.extend('Wn.UserResourcesView', {
 	},
 	
 	onResourceDropAt: function(flowbox, mimetype, data, pos) {
-//		console.log('onResourceDropAt');
-//		console.log(data);
 		// check if we already display this resource
 		var found = undefined;
 		var foundAt = -1;
@@ -210,8 +206,6 @@ Ui.LBox.extend('Wn.UserView', {
 	},
 
 	onUserChange: function() {
-//		if(this.user.getFaceUrl() != undefined)
-//			this.userface.setSrc(this.user.getFaceUrl());
 		this.userlabel.setText(this.user.getUser().firstname+' '+this.user.getUser().lastname);
 	},
 
@@ -247,36 +241,51 @@ Ui.LBox.extend('Wn.UserView', {
 	},
 
 	onExitPress: function() {
-		var dialog = new Ui.Dialog({
-			title: 'Déconnexion',
-			fullScrolling: true,
-			preferedWidth: 300,
-			preferedHeight: 300,
-			cancelButton: new Ui.Button({ text: 'Annuler' }),
-			content: new Ui.Text({ text: 'Voulez vous vraiment vous déconnecter ?'})
-		});
-		var logoutButton = new Ui.Button({ text: 'Déconnecter', style: { "Ui.Button": { color: '#fa4141' } } });
-		this.connect(logoutButton, 'press', function() {
-			if('localStorage' in window) {
-				// remove login
-				localStorage.removeItem('login');
-				// remove password
-				localStorage.removeItem('password');
-				// remove currentPath
-				localStorage.removeItem('currentPath');
-				// remove the authsession
-				localStorage.removeItem('authsession');
-			}
-			// delete the cookie
-			document.cookie = 'HOST_AUTH=; expires=Thu, 01-Jan-1970 00:00:01 GMT';
-			// delete the authsession on the server
-			var request = new Core.HttpRequest({ method: 'DELETE', url: '/cloud/authsession/current' });
-			this.connect(request, 'done', this.onAuthSessionDelete);
-			this.connect(request, 'error', this.onAuthSessionDelete);
-			request.send();
-		});
-		dialog.setActionButtons([ logoutButton ]);
-		dialog.open();
+		// if we are an admin connected on a user account, just close the window
+		if(Ui.App.current.getArguments()['user'] != undefined) {
+			var dialog = new Ui.Dialog({
+				title: 'Déconnexion',
+				fullScrolling: false,
+				preferedWidth: 350,
+				cancelButton: new Ui.Button({ text: 'Annuler' }),
+				content: new Ui.Text({ text: 'Voulez vous vraiment vous fermer votre session sur ce compte utilisateur ?'})
+			});
+			var logoutButton = new Wn.AlertButton({ text: 'Fermer' });
+			this.connect(logoutButton, 'press', function() {
+				window.close();
+			});
+			dialog.setActionButtons([ logoutButton ]);
+			dialog.open();
+		}
+		else {
+			var dialog = new Ui.Dialog({
+				title: 'Déconnexion',
+				fullScrolling: false,
+				preferedWidth: 300,
+				cancelButton: new Ui.Button({ text: 'Annuler' }),
+				content: new Ui.Text({ text: 'Voulez vous vraiment vous déconnecter ?'})
+			});
+			var logoutButton = new Wn.AlertButton({ text: 'Déconnecter' });
+			this.connect(logoutButton, 'press', function() {
+				if('localStorage' in window) {
+					// remove login
+					localStorage.removeItem('login');
+					// remove password
+					localStorage.removeItem('password');
+					// remove currentPath
+					localStorage.removeItem('currentPath');
+				}
+				// delete the cookie
+				document.cookie = 'HOST_AUTH=; expires=Thu, 01-Jan-1970 00:00:01 GMT';
+				// delete the authsession on the server
+				var request = new Core.HttpRequest({ method: 'DELETE', url: '/cloud/authsession/current' });
+				this.connect(request, 'done', this.onAuthSessionDelete);
+				this.connect(request, 'error', this.onAuthSessionDelete);
+				request.send();
+			});
+			dialog.setActionButtons([ logoutButton ]);
+			dialog.open();
+		}
 	},
 
 	onAuthSessionDelete: function() {
@@ -285,32 +294,6 @@ Ui.LBox.extend('Wn.UserView', {
 		if(loca.lastIndexOf('#') != -1)
 			loca = loca.substring(0, loca.lastIndexOf('#'));
 		window.location.replace(loca);
-	},
-
-	onDeletePress: function() {
-		var dialog = new Ui.Dialog({ preferedWidth: 300, title: 'Suppression de compte' });
-		dialog.setContent(new Ui.Text({ text: 
-			'Voulez vous vraiment supprimer votre compte ? ATTENTION, vous ne pourrez plus connecter '+
-			'et toutes vos ressources seront supprimées.' }))
-		dialog.setCancelButton(new Ui.Button({ text: 'Annuler' }));
-		var deleteButton = new Ui.Button({ text: 'Supprimer' });
-		deleteButton.setStyle({ 'Ui.Button': { color: '#d04040' }});
-		dialog.setActionButtons([deleteButton]);
-
-		this.connect(deleteButton, 'press', function() {
-			dialog.disable();
-			var request = new Core.HttpRequest({ method: 'DELETE', url: '/cloud/user?cmd=delete&user='+this.user.getId() });
-			this.connect(request, 'done', function() {
-				dialog.close();
-				window.location.reload();
-			});
-			this.connect(request, 'error', function() {
-				dialog.close();
-				window.location.reload();
-			});
-			request.send();
-		});
-		dialog.open();
 	},
 	
 	onSelectionChange: function(selection) {

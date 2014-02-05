@@ -114,13 +114,11 @@ Ui.Dialog.extend('Wn.UserProfil', {
 		if(Wn.User.hasInstance(this.user)) {
 			if(Ui.App.current.getUser().isAdmin()) {
 				// let him connect on this contact account
-				var switchButton = new Ui.Button({ text: 'Commuter' });
-				switchButton.setStyle({ 'Ui.Button': { color: '#b243ff' }});
+				var switchButton = new Wn.InfoButton({ text: 'Commuter' });
 				this.connect(switchButton, 'press', this.onSwitchPress);
 
 				// let him delete the account
-				var deleteButton = new Ui.Button({ text: 'Supprimer' });
-				deleteButton.setStyle({ 'Ui.Button': { color: '#d04040' }});
+				var deleteButton = new Wn.AlertButton({ text: 'Supprimer' });
 				this.connect(deleteButton, 'press', this.onDeletePress);
 			
 				if(Ui.App.current.getUser().getId() !== this.user.getId())
@@ -377,8 +375,7 @@ Ui.Dialog.extend('Wn.UserProfil', {
 			'Voulez vous vraiment supprimer ce compte ? ATTENTION, cet utilisateur '+
 			'et toutes ses ressources n\'existeront plus après cette action.' }));
 		dialog.setCancelButton(new Ui.Button({ text: 'Annuler' }));
-		var deleteButton = new Ui.Button({ text: 'Supprimer' });
-		deleteButton.setStyle({ 'Ui.Button': { color: '#d04040' }});
+		var deleteButton = new Wn.AlertButton({ text: 'Supprimer' });
 		dialog.setActionButtons([deleteButton]);
 
 		this.connect(deleteButton, 'press', function() {
@@ -411,21 +408,12 @@ Ui.Dialog.extend('Wn.UserProfil', {
 			'Voulez vous vraiment ouvrir une session sur le compte de cet utilisateur ? ATTENTION, '+
 			'vous ne serez plus sur votre compte et vous aller agir au nom de cette personne.' }));
 		dialog.setCancelButton(new Ui.Button({ text: 'Annuler' }));
-		var switchButton = new Ui.Button({ text: 'Commuter' });
-		switchButton.setStyle({ 'Ui.Button': { color: '#b243ff' }});
-		switchButton.disable();
+		var switchButton = new Wn.InfoButton({ text: 'Commuter' });
 		dialog.setActionButtons([switchButton]);
-
-		var request = new Core.HttpRequest({ method: 'POST', url: '/cloud/authsession', content: JSON.stringify({ user: this.user.getId() }) });
-		this.connect(request, 'done', function() {
-			session = request.getResponseJSON();
-			switchButton.enable();
-		});
-		request.send();
 
 		this.connect(switchButton, 'press', function() {
 			dialog.close();
-			window.open('/?authsession='+session.id);
+			window.open('/?user='+encodeURIComponent(this.user.getId()));
 		});
 		dialog.open();
 	},

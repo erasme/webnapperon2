@@ -22,7 +22,7 @@ Ui.Dialog.extend('Wn.CommentEditDialog', {
 		this.textField = new Ui.TextAreaField({ value: this.comment.content });
 		this.setContent(this.textField);
 		
-		var deleteButton = new Ui.Button({ text: 'Supprimer', style: { "Ui.Button": { color: '#fa4141' } } });
+		var deleteButton = new Wn.AlertButton({ text: 'Supprimer' });
 		this.connect(deleteButton, 'press', this.onDeletePress);
 		var saveButton = new Ui.Button({ text: 'Enregistrer' });
 		this.connect(saveButton, 'press', this.onSavePress);

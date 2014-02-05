@@ -48,7 +48,7 @@ using Erasme.Cloud.Pdf;
 using Erasme.Cloud.Message;
 using Erasme.Cloud.Manage;
 using Erasme.Cloud.StaticFiles;
-using Webnapperon2.Compatibility;
+using Erasme.Cloud.Compatibility;
 using Webnapperon2.PathLog;
 using Webnapperon2.News;
 using Webnapperon2.Picasa;
@@ -59,6 +59,93 @@ using Webnapperon2.Resource;
 
 namespace Webnapperon2
 {
+	/*	public class TestPlugin: IStoragePlugin
+	{
+		static readonly string[] mimetypes = new string[] { "**" };
+
+		public string[] MimeTypes {
+			get {
+				return mimetypes;
+			}
+		}
+
+		public string Path {
+			get {
+				return "testplugin";
+			}
+		}
+
+		public void GetFile(StorageService.StorageFile file)
+		{
+			Console.WriteLine("TestPlugin.Get id: "+file.Data["id"]+", name: "+file.Data["name"]);
+		
+			string version = file.GetCacheString("TestPlugin.version");
+			if(version == null) {
+				Console.WriteLine("TestPlugin NOT IN CACHE");
+				version = "v0.1";
+				file.SetCacheString("TestPlugin.version", version);
+			}
+			file.Data["testPlugin"] = version;
+		}
+
+		public void CreateFile(StorageService.StorageFile file)
+		{
+		}
+
+		public void ChangeFile(StorageService.StorageFile file)
+		{
+		}
+
+		public void DeleteFile(StorageService.StorageFile file)
+		{
+		}
+
+		public Task ProcessRequestAsync(HttpContext context)
+		{
+			return Task.FromResult<object>(null);
+		}
+	}
+
+	public class ImagePlugin: IStoragePlugin
+	{
+		static readonly string[] mimetypes = new string[] { "image/jpeg", "image/png" };
+
+		public string[] MimeTypes {
+			get {
+				return mimetypes;
+			}
+		}
+
+		public string Path {
+			get {
+				return "image";
+			}
+		}
+
+		public void GetFile(StorageService.StorageFile file)
+		{
+			Console.WriteLine("ImagePlugin.Get id: "+file.Data["id"]+", name: "+file.Data["name"]);
+		}
+
+		public void CreateFile(StorageService.StorageFile file)
+		{
+		}
+
+		public void ChangeFile(StorageService.StorageFile file)
+		{
+		}
+
+		public void DeleteFile(StorageService.StorageFile file)
+		{
+		}
+
+		public Task ProcessRequestAsync(HttpContext context)
+		{
+			return Task.FromResult<object>(null);
+		}
+	}*/
+
+
 	public class Server: HttpServer
 	{
 		AuthSessionService authSessionService;
@@ -78,12 +165,11 @@ namespace Webnapperon2
 			authSessionService = new AuthSessionService(
 				Setup.Storage+"/authsession/", Setup.AuthSessionTimeout, Setup.AuthHeader,
 				Setup.AuthCookie);
+			authSessionService.Rights = new Webnapperon2.Authentication.AuthSessionRights();
 			// plugin to handle auth sessions
 			Add(new AuthSessionPlugin(authSessionService, Setup.AuthHeader, Setup.AuthCookie));
 			// plugin to remove ETag support in iOS Safari because of iOS bugs
 			Add(new SafariETagPlugin());
-			// force IE8 to render un compatibility mode (IE7)
-			Add(new IECompatibilityPlugin());
 			// plugin to remove Keep-Alive support in iOS Safari because of iOS bugs
 			Add(new SafariKeepAlivePlugin());
 			// plugin to get the connected user JSON profil
@@ -116,6 +202,9 @@ namespace Webnapperon2
 			mapper.Add(Setup.Path+"/pdf", new PdfService(Setup.Storage+"/pdf/", storageService, Setup.TemporaryDirectory, Setup.DefaultCacheDuration, LongRunningTaskFactory));
 			Webnapperon2.Storage.StorageRights storageRights = new Webnapperon2.Storage.StorageRights();
 			storageService.Rights = storageRights;
+
+			//storageService.AddPlugin(new TestPlugin());
+			//storageService.AddPlugin(new ImagePlugin());
 
 			// messagerie
 			MessageService messageService = new MessageService(Setup.Storage+"/message/");
@@ -168,6 +257,9 @@ namespace Webnapperon2
 			// static file distribution (web app)
 			Add(new StaticFilesService(Setup.Static+"/www/", Setup.DefaultCacheDuration));
 
+			// replace application/json by text/plain for IE <9
+			// force IE8 to render un compatibility mode (IE7)
+			Add(new IECompatibilityPlugin());
 		}
 
 		public Setup Setup { get; private set; }

@@ -1,5 +1,5 @@
 //
-// MessageRights.cs
+// AuthSessionRights.cs
 //
 // Author:
 //       Daniel Lacroix <dlacroix@erasme.org>
@@ -27,14 +27,21 @@
 using System;
 using Erasme.Http;
 using Erasme.Json;
-using Erasme.Cloud.Message;
-using Webnapperon2.User;
+using Erasme.Cloud.Authentication;
 
-namespace Webnapperon2.Message
+namespace Webnapperon2.Authentication
 {
-	public class MessageRights: IMessageRights
+	public class AuthSessionRights: IAuthSessionRights
 	{
-		public void EnsureCanMonitorUser(HttpContext context, string user)
+		public void EnsureCanCreateSession(HttpContext context, string user)
+		{
+			if(context.User == null)
+				throw new WebException(401, 0, "Authentication needed");
+			if(!((bool)((JsonValue)context.Data["user"])["admin"]))
+				throw new WebException(403, 0, "Logged user has no sufficient credentials");
+		}
+
+		public void EnsureCanReadSession(HttpContext context, string session, string user)
 		{
 			if(context.User == null)
 				throw new WebException(401, 0, "Authentication needed");
@@ -42,35 +49,19 @@ namespace Webnapperon2.Message
 				throw new WebException(403, 0, "Logged user has no sufficient credentials");
 		}
 
-		public void EnsureCanCreateMessage(HttpContext context, string origin, string destination)
+		public void EnsureCanDeleteSession(HttpContext context, string session, string user)
 		{
 			if(context.User == null)
 				throw new WebException(401, 0, "Authentication needed");
-			if((context.User != origin) && !((bool)((JsonValue)context.Data["user"])["admin"]))
+			if((context.User != user) && !((bool)((JsonValue)context.Data["user"])["admin"]))
 				throw new WebException(403, 0, "Logged user has no sufficient credentials");
 		}
 
-		public void EnsureCanReadMessage(HttpContext context, string origin, string destination)
+		public void EnsureCanSearchSessions(HttpContext context)
 		{
 			if(context.User == null)
 				throw new WebException(401, 0, "Authentication needed");
-			if((context.User != origin) && (context.User != destination) && !((bool)((JsonValue)context.Data["user"])["admin"]))
-				throw new WebException(403, 0, "Logged user has no sufficient credentials");
-		}
-
-		public void EnsureCanUpdateMessage(HttpContext context, string origin, string destination)
-		{
-			if(context.User == null)
-				throw new WebException(401, 0, "Authentication needed");
-			if((context.User != origin) && (context.User != destination) && !((bool)((JsonValue)context.Data["user"])["admin"]))
-				throw new WebException(403, 0, "Logged user has no sufficient credentials");
-		}
-
-		public void EnsureCanDeleteMessage(HttpContext context, string origin, string destination)
-		{
-			if(context.User == null)
-				throw new WebException(401, 0, "Authentication needed");
-			if((context.User != origin) && !((bool)((JsonValue)context.Data["user"])["admin"]))
+			if(!((bool)((JsonValue)context.Data["user"])["admin"]))
 				throw new WebException(403, 0, "Logged user has no sufficient credentials");
 		}
 	}

@@ -7,7 +7,7 @@
 // Author(s):
 //  Daniel Lacroix <dlacroix@erasme.org>
 // 
-// Copyright (c) 2013 Departement du Rhone
+// Copyright (c) 2013-2014 Departement du Rhone
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -57,6 +57,7 @@ namespace Webnapperon2.User
 		class MonitorClient: WebSocketHandler
 		{
 			string user;
+			string currentResource = null;
 
 			public MonitorClient(UserService service, string user)
 			{
@@ -71,6 +72,19 @@ namespace Webnapperon2.User
 				get {
 					return user;
 				}
+			}
+
+			void EnsureCanReadResource(string resourceId)
+			{
+				// need a logged user
+				if(Context.User == null)
+					throw new WebException(401, 0, "Authentication needed");
+
+				JsonValue rights = Service.GetUserResourceRights(Context.User, resourceId);
+				// read rights
+				if((bool)rights["read"])
+					return;
+				throw new WebException(403, 0, "Logged user has no sufficient credentials");
 			}
 
 			public override void OnOpen()
@@ -92,6 +106,44 @@ namespace Webnapperon2.User
 					Service.OnUserConnected(User);
 			}
 
+			public override void OnMessage(string message)
+			{
+				JsonValue json = JsonValue.Parse(message);
+				// handle watch resource message
+				if(json.ContainsKey("type") && (json["type"] == "watch") && json.ContainsKey("resource")) {
+					string resource = json["resource"];
+					// check the rights
+					EnsureCanReadResource(resource);
+
+					lock(Service.instanceLock) {
+						if(currentResource != resource) {
+							// remove the old watch
+							if((currentResource != null) && (Service.clients.ContainsKey(currentResource))) {
+								WebSocketHandlerCollection<MonitorClient> channelClients;
+								channelClients = Service.clients[currentResource];
+								channelClients.Remove(this);
+								// remove the channel is empty
+								if(channelClients.Count == 0)
+									Service.clients.Remove(currentResource);
+							}
+							currentResource = resource;
+							if(currentResource != null) {
+								// watch the new current resource
+								WebSocketHandlerCollection<MonitorClient> channelClients;
+								if(Service.clients.ContainsKey(currentResource)) {
+									channelClients = Service.clients[currentResource];
+								}
+								else {
+									channelClients = new WebSocketHandlerCollection<MonitorClient>();
+									Service.clients[currentResource] = channelClients;
+								}
+								channelClients.Add(this);
+							}
+						}
+					}
+				}
+			}
+
 			public override void OnClose()
 			{
 				bool last = false;
@@ -105,6 +157,15 @@ namespace Webnapperon2.User
 							Service.clients.Remove(User);
 							last = true;
 						}
+					}
+					// remove the old resource watch
+					if((currentResource != null) && Service.clients.ContainsKey(currentResource)) {
+						WebSocketHandlerCollection<MonitorClient> channelClients;
+						channelClients = Service.clients[currentResource];
+						channelClients.Remove(this);
+						// remove the channel is empty
+						if(channelClients.Count == 0)
+							Service.clients.Remove(currentResource);
 					}
 				}
 				if(last)
@@ -256,10 +317,11 @@ namespace Webnapperon2.User
 		void OnStorageFileChanged(string storage, long file)
 		{
 			string id = null;
+
 			lock(dbcon) {
-				// search for the corresponding resource
+				// search for the corresponding storage resource (dont take picasa, podcast and news)
 				using(IDbCommand dbcmd = dbcon.CreateCommand()) {
-					dbcmd.CommandText = "SELECT id FROM resource WHERE storage_id IS NOT NULL AND storage_id=@storage";
+					dbcmd.CommandText = "SELECT id FROM resource WHERE storage_id IS NOT NULL AND storage_id=@storage AND type='storage'";
 					dbcmd.Parameters.Add(new SqliteParameter("storage", storage));
 					object resId = dbcmd.ExecuteScalar();
 					if(resId != null)
@@ -588,6 +650,8 @@ namespace Webnapperon2.User
 						clients[iUser].Broadcast(jsonString);
 					}
 				}
+				if(clients.ContainsKey(resource))
+					clients[resource].Broadcast(jsonString);
 			}
 			RaisesResourceChanged(resource);
 		}
@@ -1677,7 +1741,7 @@ namespace Webnapperon2.User
 				dbcmd.Parameters.Add(new SqliteParameter("id", id));
 				dbcmd.Transaction = transaction;
 				using(IDataReader reader = dbcmd.ExecuteReader()) {
-					if (!reader.Read ())
+					if(!reader.Read())
 						throw new WebException(404, 0, "User not found");
 					
 					user["id"] = reader.GetString(0);
@@ -2066,7 +2130,7 @@ namespace Webnapperon2.User
 
 			// delete attached storage if any
 			if(resource.ContainsKey("storage_id") && (resource["storage_id"] != null))
-				storage.DeleteStorage((string)resource["data"]);
+				storage.DeleteStorage((string)resource["storage_id"]);
 
 			RaisesResourceDeleted(id);
 

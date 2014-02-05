@@ -1,3 +1,9 @@
+webnapperon2 (2.3) saucy; urgency=low
+
+  * 
+  
+ -- Daniel Lacroix <dlacroix@erasme.org>  Wed,  5 Jan 2014 12:19:00 +0100
+
 webnapperon2 (2.2) saucy; urgency=low
 
   * Provide rights check for MessageService, PathLogService and ManagementService
