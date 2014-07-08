@@ -1,0 +1,70 @@
+
+Source:
+-------
+
+The latest version of this project is available on
+GitHub at the following address:
+
+https://github.com/erasme/webnapperon2
+
+Prerequisite:
+-------------
+
+Mono 3 and Monodevelop 4 are needed to compile this project.
+If you are using Ubuntu, the simplest way to get a recent
+Ubuntu like 14.04.
+
+The webnapperon2 also depends on some libraries and external programs.
+The complete list is available in the file debian/control in the 
+Build-Depends and Depends fields.
+
+Mainly, it needs:
+- liberasme-http
+- liberasme-cloud
+- libjs-erajs
+- libmono-sqlite
+- ffmpegstatic (available on http://packages.erasme.org/)
+- mediainfo
+- poppler-utils
+- phantomjs
+- imagemagick
+- libreoffice
+- unoconv
+
+
+Build:
+------
+
+We are using Monodevelop to build this project. So you
+can just open the project using Monodevelop or using the
+Monodevelop build tool with the following command.
+
+mdtool build -c:Release
+
+Packaging:
+----------
+
+Packaging rules for Ubuntu are available with this source.
+You simply need to run the following command to get a Debian
+package.
+
+debuild
+
+Installing:
+-----------
+
+If you build a Debian package, you just need to install it.
+
+Else, you can read the file debian/rules, the install section
+to get the needed instruction to install the webnapperon2.
+
+Setup:
+------
+
+The default setup file is /etc/webnapperon2/webnapperon2.conf
+
+You need to edit this file to setup correctly the webnapperon2.
+
+Set the ServerName, the PublicUrl and the Google* and Facebook*
+fields.
+
