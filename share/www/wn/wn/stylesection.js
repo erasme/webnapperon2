@@ -66,7 +66,6 @@ Ui.HBox.extend('Wn.ColorChooser', {
 	},
 
 	updateColor: function() {
-		console.log(this.value);
 		this.colorRect.setFill(this.value);
 	},
 
