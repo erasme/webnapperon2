@@ -75,6 +75,10 @@ Ui.ScrollingArea.extend('Storage.FileViewer', {
 	contentViewer: undefined,
 	box: undefined,
 	timer: undefined,
+	fileToolsBox: undefined,
+	filePropertiesButton: undefined,
+	fileDownloadButton: undefined,
+	fileDeleteButton: undefined,
 
 	constructor: function(config) {
 		this.addEvents('toolschange', 'end');
@@ -194,7 +198,7 @@ Ui.ScrollingArea.extend('Storage.FileViewer', {
 				this.detailsBox = new Wn.DetailsBox({ width: 250 });
 				this.box.append(this.detailsBox);
 
-				var vbox = new Ui.VBox({ spacing: 5, margin: 0 });
+				var vbox = new Ui.VBox({ spacing: 5, marginRight: 5 });
 				this.detailsBox.setContent(vbox);
 
 				this.fileToolsBox = new Wn.OptionSection({ isFolded: true });
@@ -209,6 +213,14 @@ Ui.ScrollingArea.extend('Storage.FileViewer', {
 				});
 				this.appendTool(this.fileDownloadButton);
 
+				if(this.viewer.getResource().canWrite()) {
+					this.fileDeleteButton = new Ui.Button({
+						icon: 'trash', text: 'Supprimer'
+					});
+					this.connect(this.fileDeleteButton, 'press', this.deleteFile);
+					this.appendTool(this.fileDeleteButton);
+				}
+
 				this.commentViewer = new Wn.CommentViewer({
 					user: Ui.App.current.getUser(),
 					resource: this.viewer.getResource(),
@@ -222,6 +234,8 @@ Ui.ScrollingArea.extend('Storage.FileViewer', {
 			else {
 				this.appendTool(this.filePropertiesButton);
 				this.appendTool(this.fileDownloadButton);
+				if(this.viewer.getResource().canWrite())
+					this.appendTool(this.fileDeleteButton);
 			}
 			this.onAppResize(Ui.App.current, Ui.App.current.getLayoutWidth(), Ui.App.current.getLayoutHeight());
 		}
@@ -299,22 +313,22 @@ Ui.ScrollingArea.extend('Storage.FileViewer', {
 	},
 
 	deleteFile: function() {
-//		var dialog = new Ui.Dialog({
-//			cancelButton: new Ui.Button({ text: 'Annuler' }),
-//			content: new Ui.Text({ width: 300, text: 'Voulez vous vraiment supprimer ce fichier. Il sera définitivement perdu.' })
-//		});
-//		var removeButton = new Wn.AlertButton({ text: 'Supprimer' });
-//		this.connect(removeButton, 'press', function() {
+		var dialog = new Ui.Dialog({
+			cancelButton: new Ui.DialogCloseButton(),
+			content: new Ui.Text({ width: 300, text: 'Voulez vous vraiment supprimer ce fichier. Il sera définitivement perdu.' })
+		});
+		var removeButton = new Ui.DefaultButton({ text: 'Supprimer' });
+		this.connect(removeButton, 'press', function() {
 			if(this.file !== undefined) {
 				var request = new Core.HttpRequest({ method: 'DELETE', url: '/cloud/storage/'+this.storage+'/'+this.file.id });
 				request.send();
 			}
-			else if(this.uploader != undefined)
+			else if(this.uploader !== undefined)
 				this.uploader.abort();
-//			dialog.close();
-//		});
-//		dialog.setActionButtons([ removeButton ]);
-//		dialog.open();
+			dialog.close();
+		});
+		dialog.setActionButtons([ removeButton ]);
+		dialog.open();
 	},
 
 //	onUploaderComplete: function() {
