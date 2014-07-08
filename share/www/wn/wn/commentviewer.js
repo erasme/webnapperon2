@@ -59,6 +59,7 @@ Wn.SelectionButton.extend('Wn.CommentView', {
 	contactface: undefined,
 	dateLabel: undefined,
 	commentText: undefined,
+	owner: undefined,
 
 	constructor: function(config) {
 		this.user = config.user;
@@ -73,34 +74,44 @@ Wn.SelectionButton.extend('Wn.CommentView', {
 		this.file = config.file;
 		delete(config.file);
 
-//		var hbox = new Ui.HBox({ spacing: 5 });
-//		this.setContent(hbox);
-
-//		var lbox = new Ui.LBox({ verticalAlign: 'top', background: '#999999' });
-//		hbox.append(lbox);
-		//lbox.append(new Ui.Rectangle({ fill: '#999999' }));
-//		lbox.append(new Ui.Element({ background: '#f1f1f1', margin: 1 }));
-
 		this.contactface = new Ui.Image({ width: 32, height: 32, verticalAlign: 'top' });
 		this.setIcon(this.contactface);
-//		lbox.append(this.contactface);
 
-		var userName;
-		if(this.comment.user === this.user.getId()) {
-			this.contactface.setSrc(this.user.getFaceUrl());
-			userName = 'Moi';
-		}
-		else {
-			var owner = Wn.Contact.getContact(this.comment.user);
-			this.contactface.setSrc(owner.getFaceUrl());
-			// TODO: handle the case where the contact is not ready
-			userName = owner.getName();
-		}
-
+		if(this.comment.user === this.user.getId())
+			this.owner = this.user;
+		else
+			this.owner = Wn.Contact.getContact(this.comment.user);
+		
 		var vbox = new Ui.VBox({ spacing: 2 });
 		this.setText(vbox);
 
-//		hbox.append(vbox, true);
+		this.dateLabel = new Ui.Text({ opacity: 0.8, fontSize: 10 });
+		vbox.append(this.dateLabel);
+
+		this.commentText = new Wn.ImprovedText({ text: this.comment.content });
+		this.commentText.measureCore = function(w, h) {
+			return Wn.ImprovedText.prototype.measureCore.apply(this, arguments);
+		};
+		this.commentText.arrangeCore = function(w, h) {
+			Wn.ImprovedText.prototype.arrangeCore.apply(this, arguments);
+		};
+		vbox.append(this.commentText);
+
+		// handle the case where the contact is not ready
+		if(this.owner.getIsReady())
+			this.onOwnerReady();
+		else
+			this.connect(this.owner, 'ready', this.onOwnerReady);
+	},
+
+	onOwnerReady: function() {
+		this.contactface.setSrc(this.owner.getFaceUrl());
+
+		var userName;
+		if(this.comment.user === this.user.getId())
+			userName = 'Moi';
+		else
+			userName = this.owner.getName();
 
 		var deltaStr = userName+', ';
 		var delta = new Date() - new Date(this.comment.ctime * 1000);
@@ -121,18 +132,7 @@ Wn.SelectionButton.extend('Wn.CommentView', {
 			var createDate = new Date(this.comment.ctime * 1000);
 			deltaStr += (createDate.getDate()-1)+'/'+(createDate.getMonth()+1)+'/'+createDate.getFullYear();
 		}
-
-		this.dateLabel = new Ui.Text({ opacity: 0.8, fontSize: 10, text: deltaStr });
-		vbox.append(this.dateLabel);
-
-		this.commentText = new Wn.ImprovedText({ text: this.comment.content });
-		this.commentText.measureCore = function(w, h) {
-			return Wn.ImprovedText.prototype.measureCore.apply(this, arguments);
-		};
-		this.commentText.arrangeCore = function(w, h) {
-			Wn.ImprovedText.prototype.arrangeCore.apply(this, arguments);
-		};
-		vbox.append(this.commentText);
+		this.dateLabel.setText(deltaStr);
 	},
 
 	getComment: function() {
