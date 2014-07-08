@@ -1,10 +1,9 @@
 
-Ui.Selectionable.extend('Wn.ResourceView', {
+Ui.Button.extend('Wn.ResourceView', {
 	user: undefined,
 	contact: undefined,
 	resource: undefined,
 	contactface: undefined,
-	title: undefined,
 	previewBox: undefined,
 	newicon: undefined,
 	graphic: undefined,
@@ -18,22 +17,27 @@ Ui.Selectionable.extend('Wn.ResourceView', {
 		}
 		this.resource = config.resource;
 		delete(config.resource);
-		
-		this.setData(this);
-		
-		var dropbox = new Ui.DropBox();
-		dropbox.addMimetype('Wn.MenuContactIcon');
-		this.connect(dropbox, 'drop', this.onUserDrop);
-		this.append(dropbox);
+
+		this.setDraggableData(this);
+
+		this.getDropBox().addMimetype(Wn.MenuContact);
+		this.connect(this.getDropBox(), 'drop', this.onUserDrop);
+
+		var lbox = new Ui.LBox();
+		this.setIcon(lbox);
 
 		this.graphic = new Wn.ResourceViewGraphic();
-		dropbox.append(this.graphic);
+		lbox.append(this.graphic);
 
-		this.newicon = new Wn.NewRibbon({ width: 54, height: 54, verticalAlign: 'top', horizontalAlign: 'right', margin: 2 });
-		this.append(this.newicon);
+		this.newicon = new Wn.NewRibbon({ width: 54, height: 54, verticalAlign: 'top', horizontalAlign: 'left', margin: 1 });
+		lbox.append(this.newicon);
 
-		this.connect(this, 'press', this.onResourcePress);
+//		this.connect(this, 'press', this.onPress);
 	},
+
+//	getDropBox: function() {
+//		return this.dropbox;
+//	},
 
 	getGraphic: function() {
 		return this.graphic;
@@ -44,6 +48,7 @@ Ui.Selectionable.extend('Wn.ResourceView', {
 	},
 
 	onUserDrop: function(dropbox, mimetype, data) {
+		
 		if(this.resource.canShare()) {
 			var diff = { user_id: data.getContact().getId(), read: true, share: this.user.getData().default_share_right };
 			if(this.resource.canWrite() && this.user.getData().default_write_right)
@@ -56,15 +61,17 @@ Ui.Selectionable.extend('Wn.ResourceView', {
 		if(!this.resource.getIsReady())
 			return;
 			
-		if(this.resource.getOwnerId() != this.user.getId()) {
-			if(this.contact == undefined)
+		if(this.resource.getOwnerId() !== this.user.getId()) {
+			if(this.contact === undefined)
 				this.contact = Wn.Contact.getContact(this.resource.getOwnerId());
 			this.graphic.setUserImage(this.contact.getFaceUrl());
 		}
-	
-		this.graphic.setTitle(this.resource.getName());
+		else
+			this.graphic.setUserImage(this.user.getFaceUrl()); 
+		
+		this.graphic.setTitle(this.resource.getName().toUpperCase());
 
-		if(this.resource.getSeenByMeRev() != this.resource.getRev())
+		if(this.resource.getSeenByMeRev() !== this.resource.getRev())
 			this.newicon.show();
 		else
 			this.newicon.hide();
@@ -74,10 +81,6 @@ Ui.Selectionable.extend('Wn.ResourceView', {
 			this.graphic.setShareMode('public');
 		else
 			this.graphic.setShareMode('group');
-	},
-
-	onResourcePress: function() {
-		Ui.App.current.setMainPath('resource:'+this.resource.getId());
 	},
 	
 	onResourceEdit: function() {
@@ -92,10 +95,47 @@ Ui.Selectionable.extend('Wn.ResourceView', {
 	
 	testDeleteRight: function() {
 		return (Ui.App.current.getUser().isAdmin() || this.resource.canWrite());
+	},
+
+	onBookmark: function() {
+		this.resource.bookmark();
+	},
+
+	onUnbookmark: function() {
+		this.resource.unbookmark();
+	},
+
+	testBookmarkRight: function() {
+		return !this.resource.getBookmark() && (this.resource.getOwnerId() !== this.user.getId());
+	},
+
+	testUnbookmarkRight: function() {
+		return this.resource.getBookmark() && (this.resource.getOwnerId() !== this.user.getId());
 	}
 }, {
+	onPress: function() {
+		Ui.App.current.setMainPath('resource:'+this.resource.getId());
+	},
+
+	updateColors: function() {
+		Wn.ResourceView.base.updateColors.apply(this, arguments);
+		this.graphic.setColor(this.getColor());
+		this.graphic.setForeground(this.getForeground());
+		this.graphic.setBackground(this.getBackground());
+	},
+
 	getSelectionActions: function() {
 		return {
+			"bookmark": { 
+				text: 'Mettre en favoris', icon: 'star',
+				testRight: this.testBookmarkRight,
+				scope: this, callback: this.onBookmark, multiple: false
+			},
+			"unbookmark": { 
+				text: 'Enlever des favoris', icon: 'star',
+				testRight: this.testUnbookmarkRight,
+				scope: this, callback: this.onUnbookmark, multiple: false
+			},
 			"delete": { 
 				text: 'Supprimer', icon: 'trash', color: '#d02020',
 				testRight: this.testDeleteRight,
@@ -120,8 +160,30 @@ Ui.Selectionable.extend('Wn.ResourceView', {
 		Wn.ResourceView.base.onUnload.call(this);
 
 		this.disconnect(this.resource, 'change', this.onResourceChange);
+	},
+
+	onStyleChange: function() {
+		Wn.ResourceView.base.onStyleChange.apply(this, arguments);
+		this.graphic.setMargin(this.getStyleProperty('borderWidth'));
+	},
+
+	getColor: function() {
+		var color = Ui.Color.create(this.getStyleProperty('color'));
+		var yuv = color.getYuva();
+		var deltaY = 0;
+		if(this.getIsDown())
+			deltaY = -0.20;
+		else if(this.getIsOver()) {
+			deltaY = 0.20;
+			yuv.a = Math.max(0.4, yuv.a);
+		}
+		return new Ui.Color({ y: yuv.y + deltaY, u: yuv.u, v: yuv.v, a: yuv.a });
 	}
 }, {
+	style: {
+		color: '#a1a1a1'
+	},
+	
 	views: undefined,
 
 	constructor: function() {

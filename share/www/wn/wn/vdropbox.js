@@ -11,7 +11,7 @@ Ui.DropBox.extend('Wn.VDropBox', {
 		this.fixed = new Ui.Fixed();
 		Wn.VDropBox.base.append.call(this, this.fixed);
 
-		this.marker = new Ui.Frame({ margin: 2, frameWidth: 2, radius: 2, width: 6, height: 6, fill: new Ui.Color({ r: 0.4, g: 0, b: 0.35, a: 0.8 }) });
+		this.marker = new Ui.Frame({ margin: 2, frameWidth: 2, radius: 2, width: 6, height: 6 });
 		this.marker.hide();
 		this.fixed.append(this.marker);
 
@@ -130,5 +130,13 @@ Ui.DropBox.extend('Wn.VDropBox', {
 
 	remove: function(item) {
 		this.vbox.remove(item);
+	},
+
+	onStyleChange: function() {
+		this.marker.setFill(this.getStyleProperty('markerColor'));
+	}
+}, {
+	style: {
+		markerColor: new Ui.Color({ r: 0.4, g: 0, b: 0.35, a: 0.8 })
 	}
 });

@@ -6,13 +6,16 @@ Core.Object.extend('Wn.Resource', {
 	deleted: false,
 	request: undefined,
 	user: undefined,
+	uploaders: undefined,
 
 	constructor: function(config) {
-		this.addEvents('ready', 'change', 'delete', 'error');
+		this.addEvents('ready', 'change', 'delete', 'error', 'uploadstart', 'uploadcomplete', 'uploadprogress');
 
 		this.user = config.user;
 		delete(config.user);
-		
+
+		this.uploaders = [];
+
 		if('resource' in config) {
 			this.id = config.resource.id;
 			this.updateData(config.resource);
@@ -57,6 +60,13 @@ Core.Object.extend('Wn.Resource', {
 	
 	getStorageId: function() {
 		return this.data.storage_id;
+	},
+
+	getPreviewImageUrl: function() {
+		if(this.data.preview_file_id === null)
+			return undefined;
+		else
+			return '/cloud/previewhigh/'+this.data.storage_id+'/'+this.data.preview_file_id+'?rev='+this.data.preview_file_rev;
 	},
 
 	getRights: function() {
@@ -160,6 +170,14 @@ Core.Object.extend('Wn.Resource', {
 		return false;
 	},
 
+	bookmark: function() {
+		this.user.bookmarkResource(this);
+	},
+
+	unbookmark: function() {
+		this.user.unbookmarkResource(this);
+	},
+
 	deleteResource: function() {
 		var request = new Core.HttpRequest({ method: 'DELETE',
 			url: '/cloud/resource/'+this.id
@@ -168,6 +186,50 @@ Core.Object.extend('Wn.Resource', {
 			this.fireEvent('delete', this);
 		});
 		request.send();
+	},
+
+	addUploader: function(uploader) {
+		this.uploaders.push(uploader);
+		if(this.uploaders.length === 1)
+			this.fireEvent('uploadstart', this);
+
+		this.connect(uploader, 'complete', this.onUploaderCompleteError);
+		this.connect(uploader, 'error', this.onUploaderCompleteError);
+		this.connect(uploader, 'progress', this.updateUploaders);
+	},
+
+	getUploaders: function() {
+		return this.uploaders;
+	},
+
+	onUploaderCompleteError: function(uploader) {
+		// check if all uploaders have completed
+		var allCompleted = true;
+		for(var i = 0; allCompleted && (i < this.uploaders.length); i++) {
+			allCompleted = this.uploaders[i].getIsCompleted();
+		}
+		this.updateUploaders();
+		if(allCompleted) {
+			this.uploaders = [];
+			this.fireEvent('uploadcomplete', this);
+		}
+	},
+
+	updateUploaders: function() {
+		var count = 0;
+		var countKnown = 0;
+		var totalOctet = 0;
+		var loadedOctet = 0;
+		for(var i = 0; i < this.uploaders.length; i++) {
+			var uploader = this.uploaders[i];
+			if(uploader.getTotal() != undefined) {
+				totalOctet += uploader.getTotal();
+				loadedOctet += uploader.getIsCompleted() ? uploader.getTotal() : uploader.getLoaded();
+				countKnown++;
+			}
+			count++;
+		}
+		this.fireEvent('uploadprogress', this, loadedOctet / totalOctet, loadedOctet, totalOctet, count);
 	},
 
 	update: function() {

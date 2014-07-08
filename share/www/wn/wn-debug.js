@@ -7,14 +7,25 @@ Core.Util.include(appBase+'wn/rfidreader.js');
 Core.Util.include(appBase+'wn/rfid.js');
 
 // include shared applications resources
-Core.Util.include(appBase+'wn/dualicon.js');
+Core.Util.include(appBase+'wn/ratioimage.js');
+Core.Util.include(appBase+'wn/selectionbutton.js');
+Core.Util.include(appBase+'wn/filepostuploader.js');
+Core.Util.include(appBase+'wn/ratiobox.js');
+Core.Util.include(appBase+'wn/field.js');
+Core.Util.include(appBase+'wn/groupfield.js');
+Core.Util.include(appBase+'wn/textfield.js');
+Core.Util.include(appBase+'wn/textareafield.js');
+Core.Util.include(appBase+'wn/sliderfield.js');
+Core.Util.include(appBase+'wn/checkfield.js');
+Core.Util.include(appBase+'wn/datefield.js');
+Core.Util.include(appBase+'wn/menutoolbar.js');
 Core.Util.include(appBase+'wn/newribbon.js');
 Core.Util.include(appBase+'wn/optionsection.js');
 Core.Util.include(appBase+'wn/contentbggraphic.js');
-Core.Util.include(appBase+'wn/progressbar.js');
-Core.Util.include(appBase+'wn/mediaslider.js');
+Core.Util.include(appBase+'wn/listaddbutton.js');
 Core.Util.include(appBase+'wn/improvedtext.js');
 Core.Util.include(appBase+'wn/flowdropbox.js');
+Core.Util.include(appBase+'wn/sflowdropbox.js');
 Core.Util.include(appBase+'wn/vdropbox.js');
 Core.Util.include(appBase+'wn/hdropbox.js');
 Core.Util.include(appBase+'wn/carousel.js');
@@ -23,16 +34,16 @@ Core.Util.include(appBase+'wn/resource.js');
 Core.Util.include(appBase+'wn/userface.js');
 Core.Util.include(appBase+'wn/resourceviewgraphic.js');
 Core.Util.include(appBase+'wn/resourceview.js');
-Core.Util.include(appBase+'wn/appviewgraphic.js');
 Core.Util.include(appBase+'wn/contact.js');
+Core.Util.include(appBase+'wn/videoconfview.js');
 Core.Util.include(appBase+'wn/contactmessagesdialog.js');
 Core.Util.include(appBase+'wn/historymessagesdialog.js');
 Core.Util.include(appBase+'wn/userstatsdialog.js');
-Core.Util.include(appBase+'wn/videoconfdialog.js');
 Core.Util.include(appBase+'wn/contactview.js');
 Core.Util.include(appBase+'wn/user.js');
 Core.Util.include(appBase+'wn/queue.js');
 Core.Util.include(appBase+'wn/webaccountsection.js');
+Core.Util.include(appBase+'wn/stylesection.js');
 Core.Util.include(appBase+'wn/readersection.js');
 Core.Util.include(appBase+'wn/devicesection.js');
 Core.Util.include(appBase+'wn/rfidsection.js');
@@ -79,9 +90,11 @@ Core.Util.include(appBase+'calendar/creator.js');
 Core.Util.include(appBase+'calendar/wizard.js');
 
 // include storage app
+Core.Util.include(appBase+'storage/transformable.js');
 //Core.Util.include(appBase+'storage/file.js');
 //Core.Util.include(appBase+'storage/directory.js');
 //Core.Util.include(appBase+'storage/fileviewer.js');
+Core.Util.include(appBase+'storage/texteditor.js');
 Core.Util.include(appBase+'storage/filepreview.js');
 Core.Util.include(appBase+'storage/filepropertiesdialog.js');
 Core.Util.include(appBase+'storage/preview.js');
@@ -121,6 +134,7 @@ Core.Util.include(appBase+'logins/facebook/wizard.js');
 Core.Util.include(appBase+'logins/create/wizard.js');
 
 // main app
+Core.Util.include(appBase+'icons.js');
 Core.Util.include(appBase+'main.js');
 
 })();

@@ -26,7 +26,6 @@ Ui.CanvasElement.extend('Wn.BarGraph', {
 		}
 	}
 }, {
-	
 	updateCanvas: function(ctx) {
 		var w = this.getLayoutWidth();
 		var h = this.getLayoutHeight();
@@ -44,7 +43,7 @@ Ui.CanvasElement.extend('Wn.BarGraph', {
 		if(topY > this.maxY * 2)
 			topY /= 2;
 	
-		ctx.fillStyle = '#444444';
+		ctx.fillStyle = Ui.Color.create(this.getStyleProperty('foreground')).getCssRgba();
 		ctx.font = 'normal 10px Sans-Serif';
 		ctx.textBaseline = 'top';
 		ctx.textAlign = 'center';
@@ -68,13 +67,22 @@ Ui.CanvasElement.extend('Wn.BarGraph', {
 		}
 	
 		// draw values
-		ctx.fillStyle = '#88c888';
+		ctx.fillStyle = Ui.Color.create(this.getStyleProperty('barColor')).getCssRgba();
 		for(var i = 0; i < this.data.length; i++) {
 			var cX = 40 + (colW * i) + colW/2;
 			var cH = (h-40)*this.data[i]/topY;
 			var cW = colW/2;
 			ctx.fillRect(cX-(cW/2), 20+(h-40)-cH , cW, cH);
 		}		
+	},
+
+	onStyleChange: function() {
+		this.invalidateDraw();
+	}
+}, {
+	style: {
+		foreground: 'black',
+		barColor: '#88c888'
 	}
 });
 
@@ -102,9 +110,9 @@ Ui.LBox.extend('Wn.UserStats', {
 		// query for the user path logs
 		var request;
 		if(this.contact !== undefined)
-			request = new Core.HttpRequest({ method: 'GET', url: '/cloud/pathlog?user='+this.contact.getId()+'&limit=10000' });
+			request = new Core.HttpRequest({ method: 'GET', url: '/cloud/pathlog?user='+this.contact.getId()+'&limit=100000' });
 		else
-			request = new Core.HttpRequest({ method: 'GET', url: '/cloud/pathlog?limit=100000' });
+			request = new Core.HttpRequest({ method: 'GET', url: '/cloud/pathlog?limit=10000000' });
 
 		this.connect(request, 'done', this.onRequestDone);
 		this.connect(request, 'error', this.onRequestError);
@@ -143,18 +151,28 @@ Ui.LBox.extend('Wn.UserStats', {
 	onRequestDone: function(request) {
 		this.logs = request.getResponseJSON();
 		
-		this.cbox = new Ui.VBox({ spacing: 10 });
+		this.cbox = new Ui.VBox();
 		this.setContent(this.cbox);
 		
-		this.cbox.append(new Ui.Text({ text: 'Les 20 derniers évènements', fontWeight: 'bold', textAlign: 'left' }));
-		var grid = new Ui.Grid({ cols: 'auto,*', rows: 'auto,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto', margin: 10 });
+		this.cbox.append(new Ui.Text({ text: 'Les 20 derniers évènements', textAlign: 'left' }));
+//		var grid = new Ui.Grid({
+//			cols: 'auto,*',
+//			rows: 'auto,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto',
+//			margin: 10, marginBottom: 20
+//		});
 		for(var i = 0; i < Math.min(20, this.logs.length); i++) {
 			var log = this.logs[i];
 			var date = new Date(log.create*1000);
-			grid.attach(new Ui.Label({ horizontalAlign: 'right', text: this.formatDate(date), margin: 2, marginRight: 10 }), 0, i);
-			grid.attach(new Ui.Text({ horizontalAlign: 'left', text: log.path, margin: 2 }), 1, i);
+			var hbox = new Ui.HBox();
+			this.cbox.append(hbox);
+
+			hbox.append(new Ui.Text({ textAlign: 'right', text: this.formatDate(date), width: 180, margin: 2, marginRight: 10 }));
+			hbox.append(new Ui.Text({ textAlign: 'left', text: log.path, margin: 2 }), true);
+
+//			grid.attach(new Ui.Label({ horizontalAlign: 'right', text: this.formatDate(date), margin: 2, marginRight: 10 }), 0, i);
+//			grid.attach(new Ui.Text({ horizontalAlign: 'left', text: log.path, margin: 2 }), 1, i);
 		}
-		this.cbox.append(grid);
+//		this.cbox.append(grid);
  
  		this.hourActivity();
 		this.dayActivity();
@@ -183,8 +201,8 @@ Ui.LBox.extend('Wn.UserStats', {
 			hours[date.getHours()]++;
 			total++;
 		}
-		this.cbox.append(new Ui.Text({ text: 'Activité par heure sur une semaine glissante ('+total+')', fontWeight: 'bold', textAlign: 'left' }));
-		this.cbox.append(new Wn.BarGraph({ xAxis: xAxis, data: hours, height: 250 }));
+		this.cbox.append(new Ui.Text({ text: 'Activité par heure sur une semaine glissante ('+total+')', textAlign: 'left' }));
+		this.cbox.append(new Wn.BarGraph({ xAxis: xAxis, data: hours, height: 250, marginBottom: 20 }));
 	},
 	
 	dayToString: function(day) {
@@ -230,8 +248,8 @@ Ui.LBox.extend('Wn.UserStats', {
 		var data = [];
 		for(var i = 0; i < dOrder.length; i++)
 			data.push(days[dOrder[i]]);
-		this.cbox.append(new Ui.Text({ text: 'Activité par jour sur une semaine glissante ('+total+')', fontWeight: 'bold', textAlign: 'left' }));
-		this.cbox.append(new Wn.BarGraph({ xAxis: xAxis, data: data, height: 250 }));
+		this.cbox.append(new Ui.Text({ text: 'Activité par jour sur une semaine glissante ('+total+')', textAlign: 'left' }));
+		this.cbox.append(new Wn.BarGraph({ xAxis: xAxis, data: data, height: 250, marginBottom: 20 }));
 	},
 
 	monthToString: function(month) {
@@ -291,20 +309,98 @@ Ui.LBox.extend('Wn.UserStats', {
 		var data = [];
 		for(var i = 0; i < mOrder.length; i++)
 			data.push(months[mOrder[i]]);
-		this.cbox.append(new Ui.Text({ text: 'Utilisation sur l\'année ('+total+')', fontWeight: 'bold', textAlign: 'left' }));
-		this.cbox.append(new Wn.BarGraph({ xAxis: xAxis, data: data, height: 250 }));
+		this.cbox.append(new Ui.Text({ text: "Utilisation sur l'année ("+total+")", textAlign: 'left' }));
+		this.cbox.append(new Wn.BarGraph({ xAxis: xAxis, data: data, height: 250, marginBottom: 20 }));
+	}
+});
+
+Ui.LBox.extend('Wn.ClientsList', {
+	request: undefined,
+
+	constructor: function(config) {
+		this.request = new Core.HttpRequest({ url: '/cloud/status/clients' });
+		this.connect(this.request, 'done', this.onRequestDone);
+		this.connect(this.request, 'error', this.onRequestError);
+		this.request.send();
+	},
+
+	onRequestDone: function() {
+		var json = this.request.getResponseJSON();
+		var listview = new Ui.ListView({ headers: [
+			{ type: 'string', title: 'WS', key: 'websocket' },
+			{ type: 'string', title: 'Address', key: 'remote' },
+			{ type: 'string', title: 'User', key: 'user' },
+			{ type: 'string', title: 'Path', key: 'path' },
+			{ type: 'string', title: 'Uptime', key: 'uptime' },
+			{ type: 'string', title: 'Read', key: 'readcounter' },
+			{ type: 'string', title: 'Write', key: 'writecounter' },
+			{ type: 'string', title: 'Requests', key: 'requestcounter' },
+			{ type: 'string', title: 'User-Agent', key: 'user-agent' }
+		] });
+		listview.setData(json);
+		this.setContent(listview);
+	},
+
+	onRequestError: function() {
+		this.setContent(new Ui.Text({ margin: 20, textAlign: 'center', text: 'Erreur au chargement des données' }));
+	}
+});
+
+Ui.LBox.extend('Wn.TasksList', {
+	request: undefined,
+
+	constructor: function(config) {
+		this.request = new Core.HttpRequest({ url: '/cloud/status/tasks' });
+		this.connect(this.request, 'done', this.onRequestDone);
+		this.connect(this.request, 'error', this.onRequestError);
+		this.request.send();
+	},
+
+	onRequestDone: function() {
+		var json = this.request.getResponseJSON();
+		var listview = new Ui.ListView({ headers: [
+			{ type: 'string', title: 'Id', key: 'id' },
+			{ type: 'string', title: 'Owner', key: 'owner' },
+			{ type: 'string', title: 'Status', key: 'status' },
+			{ type: 'string', title: 'Priority', key: 'priority' },
+			{ type: 'string', title: 'Description', key: 'description' }
+		] });
+		listview.setData(json);
+		this.setContent(listview);
+	},
+
+	onRequestError: function() {
+		this.setContent(new Ui.Text({ margin: 20, textAlign: 'center', text: 'Erreur au chargement des données' }));
 	}
 });
 
 Ui.Dialog.extend('Wn.UserStatsDialog', {
 
 	constructor: function(config) {
-		this.setTitle('Statistiques d\'utilisation globales');
+		this.setTitle('Outils d\'administration');
 		this.setFullScrolling(true);
-		this.setPreferedWidth(700);
-		this.setPreferedHeight(600);
-		this.setCancelButton(new Ui.Button({ text: 'Fermer' }));
+		this.setPreferredWidth(900);
+		this.setPreferredHeight(600);
+		this.setCancelButton(new Ui.DialogCloseButton());
 
-		this.setContent(new Wn.UserStats());
-	}	
+		var segmentbar = new Ui.SegmentBar({
+			field: 'text', data: [
+				{ text: 'Clients', type: 'clients' },
+				{ text: 'Tâches', type: 'tasks' },
+				{ text: 'Stats', type: 'stats' }
+			]
+		});
+		this.connect(segmentbar, 'change', this.onSegmentBarChange);
+		this.setActionButtons([ segmentbar ]);
+		segmentbar.setCurrentPosition(0);
+	},
+
+	onSegmentBarChange: function(segmentbar, data, pos) {
+		if(data.type === 'stats')
+			this.setContent(new Wn.UserStats());
+		else if(data.type === 'clients')
+			this.setContent(new Wn.ClientsList());
+		else if(data.type === 'tasks')
+			this.setContent(new Wn.TasksList());
+	}
 });

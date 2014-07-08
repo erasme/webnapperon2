@@ -8,7 +8,7 @@ Ui.Pressable.extend('Wn.UserFace', {
 	
 		this.setVerticalAlign('center');
 		this.connect(this, 'press', this.onUserPress);
-		this.append(new Ui.Rectangle({ fill: '#999999' }));
+		this.append(new Ui.Rectangle({ fill: '#7b7c7c' }));
 		this.append(new Ui.Rectangle({ fill: '#f1f1f1', margin: 1 }));
 		this.image = new Ui.Image({ width: 46, height: 46, margin: 1, src: this.user.getFaceUrl() });
 		this.append(this.image);

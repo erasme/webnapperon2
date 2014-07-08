@@ -3,28 +3,28 @@ Ui.LBox.extend('Wn.VideoPlayer', {
 	media: undefined,
 	playButton: undefined,
 	mediaBar: undefined,
-	controlBox: undefined,
 	controlsVisible: true,
 
 	constructor: function(config) {
 		this.addEvents('statechange', 'end');
 
+		var scroll = new Storage.Transformable();
+		this.append(scroll);
+
 		this.media = new Ui.Video();
-		this.append(this.media);
+		scroll.setContent(this.media);
+
 		this.connect(this.media, 'statechange', this.onMediaStateChange);
 		this.connect(this.media, 'ended', this.onMediaEnd);
-
-		this.controlBox = new Ui.LBox();
-		this.append(this.controlBox);
 
 		var pressable = new Ui.Pressable({ verticalAlign: 'center', horizontalAlign: 'center' });
 		this.connect(pressable, 'press', this.onPlayButtonPress);
 		this.playButton = new Wn.PlayButton({ mode: 'play', width: 80, height: 80 });
 		pressable.setContent(this.playButton);
-		this.controlBox.append(pressable);
+		this.append(pressable);
 
-		this.mediaBar = new Wn.MediaPlayBar({ media: this.media, verticalAlign: 'bottom', marginBottom: 20, marginLeft: 20, marginRight: 20 });
-		this.controlBox.append(this.mediaBar);
+		this.mediaBar = new Wn.MediaPlayBar({ media: this.media, verticalAlign: 'bottom' });
+		this.append(this.mediaBar);
 	},
 
 	setSrc: function(src) {
@@ -53,12 +53,14 @@ Ui.LBox.extend('Wn.VideoPlayer', {
 
 	showControls: function() {
 		this.controlsVisible = true;
-		this.controlBox.show();
+		this.playButton.show();
+		this.mediaBar.show();
 	},
 
 	hideControls: function() {
 		this.controlsVisible = false;
-		this.controlBox.hide();
+		this.playButton.hide();
+		this.mediaBar.hide();
 	},
 
 	onMediaEnd: function(media) {
@@ -66,6 +68,8 @@ Ui.LBox.extend('Wn.VideoPlayer', {
 	},
 
 	onMediaStateChange: function(media, state) {
+		//console.log(this+'.onMediaStateChange state: '+state);
+
 		if(state == 'playing') {
 			this.hideControls();
 			this.playButton.setMode('pause');
@@ -83,13 +87,14 @@ Ui.LBox.extend('Wn.VideoPlayer', {
 
 	onPlayButtonPress: function() {
 		var state = this.media.getState();
-		if(state == 'playing')
+		//console.log('onPlayButtonPress state: '+state);
+		if(state === 'playing')
 			this.media.pause();
-		else if(state == 'paused')
+		else if(state === 'paused')
 			this.media.play();
-		else if(state == 'buffering')
+		else if(state === 'buffering')
 			this.media.pause();
-		else if(state == 'initial')
+		else if(state === 'initial')
 			this.media.play();
 	}
 });

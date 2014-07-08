@@ -27,41 +27,44 @@
 using System;
 using Erasme.Http;
 using Erasme.Json;
+using Webnapperon2.User;
 
 namespace Webnapperon2.PathLog
 {
 	public class PathLogRights: IPathLogRights
 	{
+		UserService userService;
+
+		public PathLogRights(UserService userService)
+		{
+			this.userService = userService;
+		}
+
+		void EnsureHasRights(HttpContext context, string owner)
+		{
+			userService.EnsureIsAuthenticated(context);
+			if(context.User != owner)
+				userService.EnsureCanAdminUser(context, owner);
+		}
+
 		public void EnsureCanCreateLog(HttpContext context, string owner)
 		{
-			if(context.User == null)
-				throw new WebException(401, 0, "Authentication needed");
-			if((context.User != owner) && !((bool)((JsonValue)context.Data["user"])["admin"]))
-				throw new WebException(403, 0, "Logged user has no sufficient credentials");
+			EnsureHasRights(context, owner);
 		}
 
 		public void EnsureCanReadLog(HttpContext context, string owner)
 		{
-			if(context.User == null)
-				throw new WebException(401, 0, "Authentication needed");
-			if((context.User != owner) && !((bool)((JsonValue)context.Data["user"])["admin"]))
-				throw new WebException(403, 0, "Logged user has no sufficient credentials");
+			EnsureHasRights(context, owner);
 		}
 
 		public void EnsureCanDeleteLog(HttpContext context, string owner)
 		{
-			if(context.User == null)
-				throw new WebException(401, 0, "Authentication needed");
-			if((context.User != owner) && !((bool)((JsonValue)context.Data["user"])["admin"]))
-				throw new WebException(403, 0, "Logged user has no sufficient credentials");
+			EnsureHasRights(context, owner);
 		}
 
 		public void EnsureCanReadAllLogs(HttpContext context)
 		{
-			if(context.User == null)
-				throw new WebException(401, 0, "Authentication needed");
-			if(!((bool)((JsonValue)context.Data["user"])["admin"]))
-				throw new WebException(403, 0, "Logged user has no sufficient credentials");
+			userService.EnsureIsAdmin(context);
 		}
 	}
 }

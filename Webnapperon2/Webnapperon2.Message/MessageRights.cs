@@ -34,44 +34,46 @@ namespace Webnapperon2.Message
 {
 	public class MessageRights: IMessageRights
 	{
+		UserService userService;
+
+		public MessageRights(UserService userService)
+		{
+			this.userService = userService;
+		}
+
 		public void EnsureCanMonitorUser(HttpContext context, string user)
 		{
-			if(context.User == null)
-				throw new WebException(401, 0, "Authentication needed");
-			if((context.User != user) && !((bool)((JsonValue)context.Data["user"])["admin"]))
-				throw new WebException(403, 0, "Logged user has no sufficient credentials");
+			userService.EnsureIsAuthenticated(context);
+			if(context.User != user)
+				userService.EnsureCanAdminUser(context, user);
 		}
 
 		public void EnsureCanCreateMessage(HttpContext context, string origin, string destination)
 		{
-			if(context.User == null)
-				throw new WebException(401, 0, "Authentication needed");
-			if((context.User != origin) && !((bool)((JsonValue)context.Data["user"])["admin"]))
-				throw new WebException(403, 0, "Logged user has no sufficient credentials");
+			userService.EnsureIsAuthenticated(context);
+			if(context.User != origin)
+				userService.EnsureCanAdminUser(context, origin);
 		}
 
 		public void EnsureCanReadMessage(HttpContext context, string origin, string destination)
 		{
-			if(context.User == null)
-				throw new WebException(401, 0, "Authentication needed");
-			if((context.User != origin) && (context.User != destination) && !((bool)((JsonValue)context.Data["user"])["admin"]))
-				throw new WebException(403, 0, "Logged user has no sufficient credentials");
+			userService.EnsureIsAuthenticated(context);
+			if((context.User != origin) && (context.User != destination))
+				userService.EnsureIsAdmin(context);
 		}
 
 		public void EnsureCanUpdateMessage(HttpContext context, string origin, string destination)
 		{
-			if(context.User == null)
-				throw new WebException(401, 0, "Authentication needed");
-			if((context.User != origin) && (context.User != destination) && !((bool)((JsonValue)context.Data["user"])["admin"]))
-				throw new WebException(403, 0, "Logged user has no sufficient credentials");
+			userService.EnsureIsAuthenticated(context);
+			if((context.User != origin) && (context.User != destination))
+				userService.EnsureIsAdmin(context);
 		}
 
 		public void EnsureCanDeleteMessage(HttpContext context, string origin, string destination)
 		{
-			if(context.User == null)
-				throw new WebException(401, 0, "Authentication needed");
-			if((context.User != origin) && !((bool)((JsonValue)context.Data["user"])["admin"]))
-				throw new WebException(403, 0, "Logged user has no sufficient credentials");
+			userService.EnsureIsAuthenticated(context);
+			if(context.User != origin)
+				userService.EnsureCanAdminUser(context, origin);
 		}
 	}
 }

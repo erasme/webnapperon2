@@ -77,8 +77,7 @@ namespace Webnapperon2.User
 			void EnsureCanReadResource(string resourceId)
 			{
 				// need a logged user
-				if(Context.User == null)
-					throw new WebException(401, 0, "Authentication needed");
+				Service.EnsureIsAuthenticated(Context);
 
 				JsonValue rights = Service.GetUserResourceRights(Context.User, resourceId);
 				// read rights
@@ -241,7 +240,8 @@ namespace Webnapperon2.User
 							"email_notify_resource_shared INTEGER(1) DEFAULT 0, "+
 							"email_notify_comment_added INTEGER(1) DEFAULT 0, "+
 							"create_date INTEGER, default_friend INTEGER(1) DEFAULT 0 NOT NULL,"+
-							"default_share_right INTEGER(1) DEFAULT 0, default_write_right INTEGER(1) DEFAULT 0)";
+					        "default_share_right INTEGER(1) DEFAULT 0, default_write_right INTEGER(1) DEFAULT 0,"+
+					        "data VARCHAR DEFAULT NULL)";
 	
 					dbcmd.ExecuteNonQuery();
 				}
@@ -261,7 +261,8 @@ namespace Webnapperon2.User
 						"(id VARCHAR PRIMARY KEY, owner_id VARCHAR, "+
 						"type VARCHAR, name VARCHAR, data VARCHAR, public_read INTEGER(1) DEFAULT 0, "+
 						"public_write INTEGER(1) DEFAULT 0, public_share INTEGER(1) DEFAULT 0, "+
-						"ctime INTEGER, rev INTEGER DEFAULT 0, storage_id INTEGER DEFAULT NULL)";
+						"ctime INTEGER, rev INTEGER DEFAULT 0, storage_id VARCHAR DEFAULT NULL, "+
+						"preview_file_id INTEGER DEFAULT NULL, preview_file_rev INTEGER DEFAULT NULL)";
 					dbcmd.ExecuteNonQuery();
 				}
 
@@ -314,33 +315,63 @@ namespace Webnapperon2.User
 			this.messageService.MessageChanged += OnMessageChanged;
 		}
 
+		public void ChangeResourceUpdateStorage(JsonValue jsonResource, JsonValue diff)
+		{
+			JsonValue root = this.storage.GetFileInfo(jsonResource["storage_id"], 0, 1);
+			if(root != null) {
+				if(diff == null)
+					diff = new JsonObject();
+
+				if(root.ContainsKey("children")) {
+					JsonArray files = (JsonArray)root["children"];
+					if(files.Count > 0) {
+						JsonValue jsonFile = files[0];
+						diff["preview_file_id"] = jsonFile["id"];
+						diff["preview_file_rev"] = jsonFile["rev"];
+					}
+					else {
+						diff["preview_file_id"] = null;
+						diff["preview_file_rev"] = null;
+					}
+				}
+				else {
+					diff["preview_file_id"] = null;
+					diff["preview_file_rev"] = null;
+				}
+				diff["rev"] = root["storage_rev"];
+				ChangeResource(jsonResource["id"], diff, null);
+			}
+		}
+
 		void OnStorageFileChanged(string storage, long file)
 		{
-			string id = null;
+			// Console.WriteLine("OnStorageFileChanged START");
+			//DateTime startTime = DateTime.UtcNow;
 
-			lock(dbcon) {
-				// search for the corresponding storage resource (dont take picasa, podcast and news)
-				using(IDbCommand dbcmd = dbcon.CreateCommand()) {
-					dbcmd.CommandText = "SELECT id FROM resource WHERE storage_id IS NOT NULL AND storage_id=@storage AND type='storage'";
-					dbcmd.Parameters.Add(new SqliteParameter("storage", storage));
-					object resId = dbcmd.ExecuteScalar();
-					if(resId != null)
-						id = Convert.ToString(resId);
-				}
+			JsonValue jsonResource = GetResourceFromStorage(storage);
+			//Console.WriteLine("OnStorageFileChanged STEP1 "+((DateTime.UtcNow-startTime).TotalMilliseconds)+" ms");
+			if(jsonResource != null) {
+				if(jsonResource["type"] == "storage")
+					ChangeResourceUpdateStorage(jsonResource, null);
+				//Console.WriteLine("OnStorageFileChanged STEP2 "+((DateTime.UtcNow-startTime).TotalMilliseconds)+" ms");
 			}
-			if(id != null) {
-				long quota, used, ctime, mtime, rev;
-				this.storage.GetStorageInfo(storage, out quota, out used, out ctime, out mtime, out rev);
-				JsonValue diff = new JsonObject();
-				diff["rev"] = rev;
-				ChangeResource(id, diff, null);
-			}
+			//Console.WriteLine("OnStorageFileChanged END "+((DateTime.UtcNow-startTime).TotalMilliseconds)+" ms");
 		}
 
 		void OnStorageCommentCreated(string storage, long file, long comment)
 		{
+			//Console.WriteLine("OnStorageCommentCreated "+comment+" START");
+			//DateTime startTime = DateTime.UtcNow;
+
 			JsonValue resource = GetResourceFromStorage(storage);
+
+			//Console.WriteLine("OnStorageCommentCreated "+comment+" STEP1 "+((DateTime.UtcNow-startTime).TotalMilliseconds)+" ms");
+
+
 			if(resource != null) {
+				// update the resource (the revision)
+				ChangeResourceUpdateStorage(resource, null);
+
 				JsonValue fileInfo = this.storage.GetFileInfo(storage, file, 0);
 				string origin = null;
 				string text = "";
@@ -362,6 +393,9 @@ namespace Webnapperon2.User
 				string owner = (string)resource["owner_id"];
 				if(!interestedUsers.Contains(owner))
 					interestedUsers.Add(owner);
+
+				//Console.WriteLine("OnStorageCommentCreated "+comment+" STEP2 "+((DateTime.UtcNow-startTime).TotalMilliseconds)+" ms");
+
 				// get all users who bookmark this resource
 				List<string> bookmarkUsers = GetUsersWhoBookmarkResource((string)resource["id"]);
 				foreach(string bookmarkUser in bookmarkUsers)
@@ -387,9 +421,12 @@ namespace Webnapperon2.User
 
 //					message["content"] = "resource:"+resource_id+":"+file+";comment:"+comment+";text:"+text;
 
+					//Console.WriteLine("OnStorageCommentCreated "+comment+" STEP3 "+((DateTime.UtcNow-startTime).TotalMilliseconds)+" ms");
+
 					messageService.SendMessageAsync(message);
 				}
 			}
+			//Console.WriteLine("OnStorageCommentCreated "+comment+" END "+((DateTime.UtcNow-startTime).TotalMilliseconds)+" ms");
 		}
 
 		List<string> GetUsersThatHasContact(string contact)
@@ -538,8 +575,10 @@ namespace Webnapperon2.User
 
 		void OnMessageCreated(JsonValue message)
 		{
-			JsonValue destination = GetUser((string)message["destination"], null);
-			JsonValue origin = GetUser((string)message["origin"], null);
+			JsonValue destination = GetUserPrefs((string)message["destination"]);
+			JsonValue origin = GetUserPrefs((string)message["origin"]);
+			if((destination == null) || (origin == null))
+				return;
 
 			JsonValue json = new JsonObject();
 			json["event"] = "messagereceived";
@@ -1510,11 +1549,15 @@ namespace Webnapperon2.User
 		
 		JsonValue GetResource(IDbConnection dbcon, IDbTransaction transaction, string id, string filterUserId)
 		{
+			//Console.WriteLine("GetResource "+id+" START");
+			//DateTime startTime = DateTime.UtcNow;
+
 			JsonValue resource = new JsonObject();
 			// select resource
 			using(IDbCommand dbcmd = dbcon.CreateCommand()) {
 				dbcmd.CommandText =
-					"SELECT id,owner_id,type,name,data,strftime('%s',ctime),rev,public_read,public_write,public_share,storage_id "+
+					"SELECT id,owner_id,type,name,data,strftime('%s',ctime),rev,"+
+					"public_read,public_write,public_share,storage_id,preview_file_id,preview_file_rev "+
 					"FROM resource WHERE id=@id";
 				dbcmd.Parameters.Add(new SqliteParameter("id", id));
 				dbcmd.Transaction = transaction;
@@ -1544,6 +1587,14 @@ namespace Webnapperon2.User
 						resource["storage_id"] = null;
 					else
 						resource["storage_id"] = reader.GetString(10);
+					if(reader.IsDBNull(11))
+						resource["preview_file_id"] = null;
+					else
+						resource["preview_file_id"] = reader.GetInt64(11);
+					if(reader.IsDBNull(12))
+						resource["preview_file_rev"] = null;
+					else
+						resource["preview_file_rev"] = reader.GetInt64(12);
 					reader.Close();
 				}
 			}
@@ -1593,61 +1644,62 @@ namespace Webnapperon2.User
 				break;
 			case "picasa":
 				picasa.GetPicasa(id, resource);
-				// update if last update is older than 60 seconds
-				if(((long)resource["utime"] == 0L) || (resource["delta"] >= 60.0))
+				// update if last update is older than 300 seconds
+				if(((long)resource["utime"] == 0L) || (resource["delta"] >= 300.0))
 					picasa.QueueUpdatePicasa(resource);
 				break;
 			case "podcast":
 				podcast.GetPodcast(id, resource);
-				// update if last update is older than 60 seconds
-				if(((long)resource["utime"] == 0L) || (resource["delta"] >= 60.0))
+				// update if last update is older than 300 seconds
+				if(((long)resource["utime"] == 0L) || (resource["delta"] >= 300.0))
 					podcast.QueueUpdatePodcast(resource);
 				break;
 			case "news":
 				news.GetNews(id, resource);
-				// update if last update is older than 60 seconds
-				if(((long)resource["utime"] == 0L) || (resource["delta"] >= 60.0))
+				// update if last update is older than 300 seconds
+				if(((long)resource["utime"] == 0L) || (resource["delta"] >= 300.0))
 					news.QueueUpdateNews(resource);
 				break;
 			}
-			// get storage specific data
-			if(((string)resource["storage_id"]) != null) {
-				JsonValue root = storage.GetFileInfo((string)resource["storage_id"], 0, 1);
-				if(root.ContainsKey("children")) {
-					JsonArray files = (JsonArray)root["children"];
-					if(files.Count > 0) {
-						JsonValue file = files[0];
-						resource["previewImageUrl"] = "/cloud/previewhigh/" + resource["storage_id"] + "/" + file["id"] + "?rev=" + file["rev"];
-					}
-				}
-			}
+
+			//Console.WriteLine("GetResource "+id+" END "+((DateTime.UtcNow-startTime).TotalMilliseconds)+" ms");
+
 			return resource;
 		}
 
 		public JsonValue GetUserResourceRights(string user, string resource)
 		{
-			JsonValue resourceJson = GetResource(resource);
-			JsonValue userJson = GetUser(user);
-
-			bool admin = ((string)resourceJson["owner_id"] == user) || (bool)userJson["admin"];
-			bool read = admin || (bool)resourceJson["public_read"];
-			bool write = admin || (bool)resourceJson["public_write"];
-			bool share = admin || (bool)resourceJson["public_share"];
-			bool delete = admin;
-
-			foreach(JsonValue right in (JsonArray)resourceJson["rights"]) {
-				if((string)right["user_id"] == user) {
-					read = read || (bool)right["read"];
-					write = write || (bool)right["write"];
-					share = share || (bool)right["share"];
-				}
-			}
 			JsonValue res = new JsonObject();
-			res["admin"] = admin;
-			res["read"] = read;
-			res["write"] = write;
-			res["share"] = share;
-			res["delete"] = delete;
+
+			if(UserIsAdmin(user)) {
+				res["admin"] = true;
+				res["read"] = true;
+				res["write"] = true;
+				res["share"] = true;
+				res["delete"] = true;
+			}
+			else {
+				JsonValue resourceJson = GetResource(resource);
+
+				bool admin = ((string)resourceJson["owner_id"] == user);
+				bool read = admin || (bool)resourceJson["public_read"];
+				bool write = admin || (bool)resourceJson["public_write"];
+				bool share = admin || (bool)resourceJson["public_share"];
+				bool delete = admin;
+
+				foreach(JsonValue right in (JsonArray)resourceJson["rights"]) {
+					if((string)right["user_id"] == user) {
+						read = read || (bool)right["read"];
+						write = write || (bool)right["write"];
+						share = share || (bool)right["share"];
+					}
+				}
+				res["admin"] = admin;
+				res["read"] = read;
+				res["write"] = write;
+				res["share"] = share;
+				res["delete"] = delete;
+			}
 			return res;
 		}
 
@@ -1702,9 +1754,16 @@ namespace Webnapperon2.User
 
 		public bool GetIsUserConnected(string id)
 		{
-			bool res;
+			bool res = false;
 			lock(instanceLock) {
-				res = clients.ContainsKey(id);
+				if(clients.ContainsKey(id)) {
+					foreach(MonitorClient client in clients[id]) {
+						if(client.User == id) {
+							res = true;
+							break;
+						}
+					}
+				}
 			}
 			return res;
 		}
@@ -1726,8 +1785,37 @@ namespace Webnapperon2.User
 			}
 			return user;
 		}
-		
-		JsonValue GetUser(IDbConnection dbcon, IDbTransaction transaction, string id, bool full, string filterUserId)
+
+		public bool UserIsAdmin(string id)
+		{
+			bool isAdmin = false;
+			lock(dbcon) {
+				// select from the user table
+				using(IDbCommand dbcmd = dbcon.CreateCommand()) {
+					dbcmd.CommandText = "SELECT admin FROM user WHERE id=@id";
+					dbcmd.Parameters.Add(new SqliteParameter("id", id));
+					object res = dbcmd.ExecuteScalar();
+					if(res != null)
+						isAdmin = Convert.ToInt64(res) != 0;
+				}
+			}
+			return isAdmin;
+		}
+
+		public JsonValue GetUserPrefs(string id)
+		{
+			JsonValue user;
+			lock(dbcon) {
+				using(IDbTransaction transaction = dbcon.BeginTransaction()) {
+					user = GetUserPrefs(dbcon, transaction, id);
+					// commit the transaction
+					transaction.Commit();
+				}
+			}
+			return user;
+		}
+
+		JsonValue GetUserPrefs(IDbConnection dbcon, IDbTransaction transaction, string id)
 		{
 			JsonValue user = new JsonObject();
 
@@ -1738,6 +1826,99 @@ namespace Webnapperon2.User
 					"default_friend,email,email_notify_message_received,email_notify_contact_added,"+
 					"email_notify_resource_shared,email_notify_comment_added,login,admin,"+
 					"googleid,default_share_right,default_write_right,facebookid FROM user WHERE id=@id";
+				dbcmd.Parameters.Add(new SqliteParameter("id", id));
+				dbcmd.Transaction = transaction;
+				using(IDataReader reader = dbcmd.ExecuteReader()) {
+					if(!reader.Read())
+						return null;
+
+					user["id"] = reader.GetString(0);
+					if(reader.IsDBNull(1))
+						user["firstname"] = null;
+					else
+						user["firstname"] = reader.GetString(1);
+					if (reader.IsDBNull(2))
+						user["lastname"] = null;
+					else
+						user["lastname"] = reader.GetString(2);
+					if (reader.IsDBNull(3))
+						user["description"] = null;
+					else
+						user["description"] = reader.GetString(3);
+					if(reader.IsDBNull(4))
+						user["face_rev"] = 0;
+					else
+						user["face_rev"] = reader.GetInt64(4);
+					if(reader.IsDBNull(5))
+						user["default_friend"] = false;
+					else
+						user["default_friend"] = (reader.GetInt64(5) != 0);
+
+					if(reader.IsDBNull(6))
+						user["email"] = null;
+					else
+						user["email"] = reader.GetString(6);
+					if(reader.IsDBNull(7))
+						user["email_notify_message_received"] = false;
+					else
+						user["email_notify_message_received"] = (reader.GetInt64(7) != 0);
+					if(reader.IsDBNull(8))
+						user["email_notify_contact_added"] = false;
+					else
+						user["email_notify_contact_added"] = (reader.GetInt64(8) != 0);
+					if(reader.IsDBNull(9))
+						user ["email_notify_resource_shared"] = false;
+					else
+						user ["email_notify_resource_shared"] = (reader.GetInt64(9) != 0);
+					if(reader.IsDBNull(10))
+						user["email_notify_comment_added"] = false;
+					else
+						user["email_notify_comment_added"] = (reader.GetInt64(10) != 0);
+					if(reader.IsDBNull(11))
+						user["login"] = null;
+					else
+						user["login"] = reader.GetString(11);
+					if(reader.IsDBNull(12))
+						user["admin"] = false;
+					else
+						user["admin"] = (reader.GetInt64(12) != 0);
+					if(reader.IsDBNull(13))
+						user["googleid"] = null;
+					else
+						user["googleid"] = reader.GetString(13);
+					if(reader.IsDBNull(14))
+						user["default_share_right"] = false;
+					else
+						user["default_share_right"] = (reader.GetInt64(14) != 0);
+					if(reader.IsDBNull(15))
+						user["default_write_right"] = false;
+					else
+						user["default_write_right"] = (reader.GetInt64(15) != 0);
+					if(reader.IsDBNull(16))
+						user["facebookid"] = null;
+					else
+						user["facebookid"] = reader.GetString(16);
+					reader.Close();
+				}
+			}
+			return user;
+		}
+
+		JsonValue GetUser(IDbConnection dbcon, IDbTransaction transaction, string id, bool full, string filterUserId)
+		{
+			//Console.WriteLine("GetUser "+id+" START");
+
+			DateTime startTime = DateTime.UtcNow;
+
+			JsonValue user = new JsonObject();
+
+			// select from the user table
+			using(IDbCommand dbcmd = dbcon.CreateCommand()) {
+				dbcmd.CommandText = 
+					"SELECT id,firstname,lastname,description,face_rev,"+
+					"default_friend,email,email_notify_message_received,email_notify_contact_added,"+
+					"email_notify_resource_shared,email_notify_comment_added,login,admin,"+
+					"googleid,default_share_right,default_write_right,facebookid,data FROM user WHERE id=@id";
 				dbcmd.Parameters.Add(new SqliteParameter("id", id));
 				dbcmd.Transaction = transaction;
 				using(IDataReader reader = dbcmd.ExecuteReader()) {
@@ -1766,7 +1947,11 @@ namespace Webnapperon2.User
 					else
 						user["default_friend"] = (reader.GetInt64(5) != 0);
 
+					//Console.WriteLine("GetUser "+id+" STEP1 "+((DateTime.UtcNow-startTime).TotalMilliseconds)+" ms");
+
 					user["online"] = GetIsUserConnected(id);
+
+					//Console.WriteLine("GetUser "+id+" STEP2 "+((DateTime.UtcNow-startTime).TotalMilliseconds)+" ms");
 
 					if(full) {
 						if(reader.IsDBNull(6))
@@ -1813,10 +1998,16 @@ namespace Webnapperon2.User
 							user["facebookid"] = null;
 						else
 							user["facebookid"] = reader.GetString(16);
+
+						if(reader.IsDBNull(17))
+							user["data"] = null;
+						else
+							user["data"] = JsonValue.Parse(reader.GetString(17));
 					}
 					reader.Close();
 				}
 			}
+			//Console.WriteLine("GetUser "+id+" STEP3 "+((DateTime.UtcNow-startTime).TotalMilliseconds)+" ms");
 			if(full) {
 				// select contacts
 				using(IDbCommand dbcmd = dbcon.CreateCommand()) {
@@ -1835,6 +2026,8 @@ namespace Webnapperon2.User
 						reader.Close();
 					}
 				}
+
+				//Console.WriteLine("GetUser "+id+" STEP4F "+((DateTime.UtcNow-startTime).TotalMilliseconds)+" ms");
 
 				// select bookmarks
 				List<string> bookmarkIds = GetBookmarks(dbcon, transaction, id);
@@ -1860,8 +2053,10 @@ namespace Webnapperon2.User
 				user["readers"] = GetUserReaders(dbcon, transaction, id);
 			}
 			else {
+				//Console.WriteLine("GetUser "+id+" STEP4S "+((DateTime.UtcNow-startTime).TotalMilliseconds)+" ms");
 				user["resources"] = GetResources(dbcon, transaction, id, filterUserId);
 			}
+			//Console.WriteLine("GetUser "+id+" END "+((DateTime.UtcNow-startTime).TotalMilliseconds)+" ms");
 			return user;
 		}
 		
@@ -1938,6 +2133,49 @@ namespace Webnapperon2.User
 			return id;
 		}
 
+		public string GetUserFromLoginPassword(string login, string password)
+		{
+			string foundPassword = null;
+			string user = null;
+			lock(dbcon) {
+				// select from the user table
+				using(IDbCommand dbcmd = dbcon.CreateCommand()) {
+					dbcmd.CommandText = "SELECT id,password FROM user WHERE login=@login";
+					dbcmd.Parameters.Add(new SqliteParameter("login", login));
+					using(IDataReader reader = dbcmd.ExecuteReader()) {
+						if(reader.Read()) {
+							user = reader.GetString(0);
+							if(!reader.IsDBNull(1)) {
+								foundPassword = reader.GetString(1);
+							}
+						}
+						reader.Close ();
+					}
+				}
+			}
+			bool passwordGood = false;
+			if(foundPassword != null) {
+				int pos = foundPassword.IndexOf(':');
+				if(pos == -1)
+					passwordGood = (password == foundPassword);
+				else {
+					string method = foundPassword.Substring(0, pos);
+					string subPassword = foundPassword.Substring(pos+1);
+					if(method == "clear")
+						passwordGood = (password == subPassword);
+					else if(method == "sha1") {
+						System.Security.Cryptography.SHA1 hmac = System.Security.Cryptography.SHA1CryptoServiceProvider.Create();
+						string sha1Password = Convert.ToBase64String(hmac.ComputeHash(Encoding.UTF8.GetBytes(password)));
+						passwordGood = (sha1Password == subPassword);
+					}
+				}
+			}
+			if(passwordGood)
+				return user;
+			else
+				return null;
+		}
+
 		public void ChangeResource(string resource, JsonValue diff, string seenBy)
 		{
 			List<string> interestedUsersBefore = null;
@@ -1983,8 +2221,9 @@ namespace Webnapperon2.User
 								dbcmd.Parameters.Add(new SqliteParameter(key, (string)diff[key]));
 							}
 						}
+	
 						// handle integer
-						foreach(string key in new string[]{ "rev" }) {
+						foreach(string key in new string[]{ "rev", "preview_file_id", "preview_file_rev" }) {
 							if(diff.ContainsKey(key)) {
 								if(first)
 									first = false;
@@ -2005,7 +2244,6 @@ namespace Webnapperon2.User
 								dbcmd.Parameters.Add(new SqliteParameter(key, ((bool)diff[key])?1:0));
 							}
 						}
-
 
 						dbcmd.CommandText = "UPDATE resource SET "+sb.ToString()+" WHERE id=@resource";
 						dbcmd.Parameters.Add(new SqliteParameter("resource", resource));
@@ -2526,7 +2764,8 @@ namespace Webnapperon2.User
 					sb.Append("=");
 					sb.Append(((bool)diff[key])?1:0);
 				}
-			}			
+			}
+			// handle admin			
 			if(diff.ContainsKey("admin")) {
 				if(first)
 					first = false;
@@ -2535,6 +2774,23 @@ namespace Webnapperon2.User
 				sb.Append("admin");
 				sb.Append("=");
 				sb.Append(((bool)diff["admin"])?1:0);
+			}
+			// handle data
+			if(diff.ContainsKey("data")) {
+				if(first)
+					first = false;
+				else
+					sb.Append(",");
+				sb.Append("data");
+				sb.Append("=");
+				string value = diff["data"].ToString();
+				if(value == null)
+					sb.Append("null");
+				else {
+					sb.Append("'");
+					sb.Append(value.Replace("'","''"));
+					sb.Append("'");
+				}
 			}
 
 			lock(dbcon) {
@@ -3035,81 +3291,85 @@ namespace Webnapperon2.User
 			return user;
 		}
 
-		public void EnsureCanCreateUser(HttpContext context)
+		public void EnsureIsAuthenticated(HttpContext context)
 		{
-			// need a logged user
-			if(context.User == null)
-				throw new WebException(401, 0, "Authentication needed");
-			JsonValue user = GetUser(context.User);
-			// user is an admin
-			if((bool)user["admin"])
-				return;
-			throw new WebException(403, 0, "Logged user has no sufficient credentials");
+			if(context.User == null) {
+				string authenticatedUser = authSessionService.GetAuthenticatedUser(context);
+				if(authenticatedUser == null) {
+					// check for HTTP Basic authorization
+					if(context.Request.Headers.ContainsKey("authorization")) {
+						string[] parts = context.Request.Headers["authorization"].Split(new char[] { ' ' }, 2, StringSplitOptions.RemoveEmptyEntries);
+						if(parts[0].ToLowerInvariant() == "basic") {
+							string authorization = Encoding.UTF8.GetString(Convert.FromBase64String(parts[1]));
+							int pos = authorization.IndexOf(':');
+							if(pos != -1) {
+								string login = authorization.Substring(0, pos);
+								string password = authorization.Substring(pos + 1);
+								authenticatedUser = GetUserFromLoginPassword(login, password);
+								context.User = authenticatedUser;
+							}
+						}
+					}
+					if(authenticatedUser == null)
+						throw new WebException(401, 0, "Authentication needed");
+				}
+			}
 		}
 
-		public void EnsureCanAdminUser(HttpContext context, string userId)
+		public void EnsureCanCreateUser(HttpContext context, JsonValue data)
+		{
+			// only an admin can create an admin user,
+			// else, user creation is free
+			if(data.ContainsKey("admin") && ((bool)data["admin"]))
+				EnsureIsAdmin(context);
+		}
+
+		public void EnsureCanAdminUser(HttpContext context, string user)
+		{
+			EnsureIsAdmin(context);
+		}
+
+		public void EnsureIsAdmin(HttpContext context)
 		{
 			// need a logged user
-			if(context.User == null)
-				throw new WebException(401, 0, "Authentication needed");
-			JsonValue user = GetUser(context.User);
-			// user is an admin
-			if((bool)user["admin"])
-				return;
-			throw new WebException(403, 0, "Logged user has no sufficient credentials");
+			EnsureIsAuthenticated(context);
+			// check if the user is an administrator
+			if(!UserIsAdmin(context.User))
+				throw new WebException(403, 0, "Logged user has no sufficient credentials");
 		}
 
 		public void EnsureCanDeleteUser(HttpContext context, string userId)
 		{
 			// need a logged user
-			if(context.User == null)
-				throw new WebException(401, 0, "Authentication needed");
-			JsonValue user = GetUser(context.User);
-			// user is an admin
-			if((bool)user["admin"])
-				return;
-			// user want to remove itself
-			if((string)user["id"] == userId)
-				return;
-			throw new WebException(403, 0, "Logged user has no sufficient credentials");
+			EnsureIsAuthenticated(context);
+			// user can remove itself
+			if(context.User != userId)
+				EnsureIsAdmin(context);
 		}
 
 		public void EnsureCanUpdateUser(HttpContext context, string userId)
 		{
 			// need a logged user
-			if(context.User == null)
-				throw new WebException(401, 0, "Authentication needed");
-			JsonValue user = GetUser(context.User);
-			// user is an admin
-			if((bool)user["admin"])
-				return;
-			// user want to update itself
-			if((string)user["id"] == userId)
-				return;
-			throw new WebException(403, 0, "Logged user has no sufficient credentials");
+			EnsureIsAuthenticated(context);
+			// only the user himself or admins
+			if(context.User != userId)
+				EnsureIsAdmin(context);
 		}
 
 		public void EnsureCanReadShortUser(HttpContext context, string userId)
 		{
 			// need a logged user
-			if(context.User == null)
-				throw new WebException(401, 0, "Authentication needed");
+			EnsureIsAuthenticated(context);
 			// allowed to all logged users
 		}
 
 		public void EnsureCanReadFullUser(HttpContext context, string userId)
 		{
 			// need a logged user
-			if(context.User == null)
-				throw new WebException(401, 0, "Authentication needed");
-			JsonValue user = GetUser(context.User);
-			// user is an admin
-			if((bool)user["admin"])
-				return;
-			// user want to view itself
-			if((string)user["id"] == userId)
-				return;
-			throw new WebException(403, 0, "Logged user has no sufficient credentials");
+			EnsureIsAuthenticated(context);
+			// user can view itself
+			if(context.User != userId)
+				EnsureIsAdmin(context);
 		}
 
 		string GenerateRandomId(int size = 10)
@@ -3143,6 +3403,7 @@ namespace Webnapperon2.User
 
 			if(context.Request.IsWebSocketRequest && (parts.Length == 1) && IsValidId(parts[0])) {
 				string user = parts[0];
+				EnsureCanReadFullUser(context, user);
 				// accept the web socket and process it
 				await context.AcceptWebSocketRequestAsync(new MonitorClient(this, user));
 			}
@@ -3152,44 +3413,11 @@ namespace Webnapperon2.User
 
 				string login = (string)content["login"];
 				string password = (string)content["password"];
+
+				string user = GetUserFromLoginPassword(login, password);
 						
-				string foundPassword = null;
-				string user = null;
-				lock(dbcon) {
-					// select from the user table
-					using(IDbCommand dbcmd = dbcon.CreateCommand()) {
-						dbcmd.CommandText = "SELECT id,password FROM user WHERE login=@login";
-						dbcmd.Parameters.Add(new SqliteParameter("login", login));
-						using(IDataReader reader = dbcmd.ExecuteReader()) {
-							if(reader.Read()) {
-								user = reader.GetString(0);
-								if(!reader.IsDBNull(1)) {
-									foundPassword = reader.GetString(1);
-								}
-							}
-							reader.Close ();
-						}
-					}
-				}
-				bool passwordGood = false;
-				if(foundPassword != null) {
-					int pos = foundPassword.IndexOf(':');
-					if(pos == -1)
-						passwordGood = (password == foundPassword);
-					else {
-						string method = foundPassword.Substring(0, pos);
-						string subPassword = foundPassword.Substring(pos+1);
-						if(method == "clear")
-							passwordGood = (password == subPassword);
-						else if(method == "sha1") {
-							System.Security.Cryptography.SHA1 hmac = System.Security.Cryptography.SHA1CryptoServiceProvider.Create();
-							string sha1Password = Convert.ToBase64String(hmac.ComputeHash(Encoding.UTF8.GetBytes(password)));
-							passwordGood = (sha1Password == subPassword);
-						}
-					}
-				}
-				// test the password
-				if(passwordGood) {
+				// password is good
+				if(user != null) {
 					JsonValue authSession = authSessionService.Create(user);
 
 					context.Response.StatusCode = 200;
@@ -3204,6 +3432,9 @@ namespace Webnapperon2.User
 			}
 			// GET /[?firstname=firstname][&lastname=lastname][&description=description][&query=words] search
 			else if((context.Request.Method == "GET") && (parts.Length == 0)) {
+
+				EnsureIsAuthenticated(context);
+
 				string firstname = null;
 				if(context.Request.QueryString.ContainsKey("firstname"))
 					firstname = context.Request.QueryString["firstname"];
@@ -3244,6 +3475,9 @@ namespace Webnapperon2.User
 			}
 			// GET /[user]/face get the face
 			else if((context.Request.Method == "GET") && (parts.Length == 2) && IsValidId(parts[0]) && (parts[1] == "face")) {
+
+				EnsureIsAuthenticated(context);
+
 				string user = parts[0];
 				if(File.Exists(basePath+"/faces/"+user)) {
 					context.Response.StatusCode = 200;
@@ -3261,8 +3495,10 @@ namespace Webnapperon2.User
 			// POST / create a user
 			else if((context.Request.Method == "POST") && (parts.Length == 0)) {
 				// test rights
-				//EnsureCanCreateUser(response.Context);
 				JsonValue json = await context.Request.ReadAsJsonAsync();
+
+				EnsureCanCreateUser(context, json);
+
 				string user = CreateUser(json);
 									
 				context.Response.StatusCode = 200;

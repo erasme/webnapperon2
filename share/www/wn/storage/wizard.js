@@ -6,14 +6,12 @@ Wn.WizardItem.extend('Storage.Wizard', {
 		var vbox = new Ui.VBox({ spacing: 10 });
 		this.setContent(vbox);
 
-		vbox.append(new Ui.Label({ text: 'Nom de la ressource:', horizontalAlign: 'left' }));
-
-		this.nameField = new Ui.TextField({ marginLeft: 20 });
+		this.nameField = new Wn.TextField({ title: 'Nom de la ressource' });
 		this.connect(this.nameField, 'change', this.onChange);
 		vbox.append(this.nameField);
 
 		var data = this.getData();
-		if(data.name != undefined)
+		if(data.name !== undefined)
 			this.nameField.setValue(data.name);
 		this.onChange();
 	},

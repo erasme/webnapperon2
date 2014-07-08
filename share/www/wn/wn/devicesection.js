@@ -7,34 +7,30 @@ Ui.Dialog.extend('Wn.DeviceEditDialog', {
 		this.device = config.device;
 		delete(config.device);
 	
-		this.setPreferedWidth(500);
-		this.setPreferedHeight(400);
+		this.setPreferredWidth(500);
+		this.setPreferredHeight(400);
 		this.setFullScrolling(true);
 	
 		this.setTitle('Client de consultation');
-		this.setCancelButton(new Ui.Button({ text: 'Fermer' }));
+		this.setCancelButton(new Ui.DialogCloseButton());
 		
 		var deleteButton = new Ui.Button({ text: 'Supprimer' });
 		this.connect(deleteButton, 'press', this.onDeletePress);
 		
-		var saveButton = new Ui.Button({ text: 'Enregistrer' });
+		var saveButton = new Ui.DefaultButton({ text: 'Enregistrer' });
 		this.connect(saveButton, 'press', this.onSavePress);
 		
 		this.setActionButtons([ deleteButton, saveButton ]);
 		
 		var vbox = new Ui.VBox({ spacing: 10, margin: 10 });
 		this.setContent(vbox);
-		
-		var hbox = new Ui.HBox({ spacing: 10 });
-		vbox.append(hbox);		
-		hbox.append(new Ui.Text({ text: 'Identifiant', verticalAlign: 'center', width: 100, textAlign: 'right' }));
-		hbox.append(new Ui.Text({ text: this.device.getDevice().id, verticalAlign: 'center' }), true);
-		
-		var hbox = new Ui.HBox({ spacing: 10 });
-		vbox.append(hbox);		
-		hbox.append(new Ui.Text({ text: 'Nom', verticalAlign: 'center', width: 100, textAlign: 'right' }));
-		this.nameField = new Ui.TextField({ value: this.device.getDevice().name, verticalAlign: 'center' });
-		hbox.append(this.nameField, true);
+
+		var idField = new Wn.TextField({ title: 'Identifiant', value: this.device.getDevice().id });
+		idField.disable();
+		vbox.append(idField);
+
+		this.nameField = new Wn.TextField({ title: 'Nom', value: this.device.getDevice().name });
+		vbox.append(this.nameField);
 		
 		var readerSection = new Wn.ReaderSection({ user: this.device.getUser(), device: this.device.getDevice().id, readers: this.device.getUser().getData().readers, title: 'Lecteurs RFID liés à cette interface' });
 		vbox.append(readerSection);
@@ -67,24 +63,20 @@ Ui.Dialog.extend('Wn.DeviceNewDialog', {
 		this.addEvents('done');
 	
 		this.setTitle('Nouveau client de consultation');
-		this.setPreferedWidth(400);
-		this.setPreferedHeight(300);
+		this.setPreferredWidth(400);
+		this.setPreferredHeight(300);
 		
 		var vbox = new Ui.VBox({ spacing: 10 });
 		this.setContent(vbox);
 		
 		vbox.append(new Ui.Text({ text: 'Enregister le navigateur actuel comme un nouveau client de consultation.' }));
 
-		var hbox = new Ui.HBox({ spacing: 10 });
-		hbox.append(new Ui.Text({ text: 'Nom d\'usage', width: 100, verticalAlign: 'center' }));
-		this.textField = new Ui.TextField({ verticalAlign: 'center' });
-		hbox.append(this.textField, true);
-		vbox.append(hbox);
-				
-		var closeButton = new Ui.Button({ text: 'Fermer' });
-		this.setCancelButton(closeButton);
+		this.textField = new Wn.TextField({ title: "Nom d'usage" });
+		vbox.append(this.textField);
+
+		this.setCancelButton(new Ui.DialogCloseButton());
 		
-		var createButton = new Ui.Button({ text: 'Créer' });
+		var createButton = new Ui.DefaultButton({ text: 'Créer' });
 		this.connect(createButton, 'press', this.onCreatePress);
 		this.setActionButtons([ createButton ]);		
 	},
@@ -111,7 +103,7 @@ Ui.Dialog.extend('Wn.DeviceNewDialog', {
 	}
 });
 
-Ui.Selectionable.extend('Wn.Device', {
+Wn.SelectionButton.extend('Wn.Device', {
 	user: undefined,
 	device: undefined,
 
@@ -123,23 +115,16 @@ Ui.Selectionable.extend('Wn.Device', {
 
 		this.device = config.device;
 		delete(config.device);
-		
-		var vbox = new Ui.VBox();
-		this.setContent(vbox);
-	
-		var icon = new Ui.Icon({ icon: 'screen', width: 48, height: 48, fill: '#444444', horizontalAlign: 'center' });
-		vbox.append(icon);
-				
-		var label = new Ui.CompactLabel({ width: 80, maxLine: 2, textAlign: 'center', text: this.device.name });
-		vbox.append(label);
-		
+
+		this.setIcon('screen');
+		this.setText(this.device.name);
+
 		if('localStorage' in window) {
 			if((localStorage.getItem('deviceId') !== undefined) && (localStorage.getItem('deviceId') == this.device.id)) {
-				icon.setFill('#3434e4');
-				label.setColor('#3434e4');
+				// use the badge to tell that this device is the current browser
+				this.setBadge('@');
 			}
 		}
-
 	},
 	
 	getUser: function() {
@@ -158,11 +143,6 @@ Ui.Selectionable.extend('Wn.Device', {
 		this.fireEvent('delete', this);
 	}
 }, {
-	// ex:
-	// {
-	//   delete: { text: 'Delete', icon: 'trash', scope: this, callback: this.onDelete, multiple: true },
-	//   edit: ...
-	// }
 	getSelectionActions: function() {
 		return Wn.Device.deviceActions;
 	}
@@ -210,11 +190,9 @@ Wn.OptionSection.extend('Wn.DeviceSection', {
 		this.flow = new Ui.Flow({ uniform: true });
 		this.setContent(this.flow);
 				
-		var pressable = new Ui.Pressable();
+		var pressable = new Wn.ListAddButton({ verticalAlign: 'center', horizontalAlign: 'center' });
 		this.connect(pressable, 'press', this.onNewPress);
 		this.flow.append(pressable);
-		
-		pressable.setContent(new Ui.Icon({ icon: 'plus', width: 48, height: 48, fill: '#444444', verticalAlign: 'center', horizontalAlign: 'center' }));
 	},
 	
 	setDevices: function(devices) {

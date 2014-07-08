@@ -1,5 +1,5 @@
 
-Ui.Selectionable.extend('Wn.AddWorldIcon', {
+Wn.SelectionButton.extend('Wn.AddWorldIcon', {
 	user: undefined,
 	dialog: undefined,
 
@@ -9,15 +9,9 @@ Ui.Selectionable.extend('Wn.AddWorldIcon', {
 		
 		this.dialog = config.dialog;
 		delete(config.dialog);
-		
-		var vbox = new Ui.VBox({ margin: 5 });
-		this.append(vbox);
 
-		var icon = new Ui.Icon({ width: 48, height: 48, margin: 1, icon: 'earth', fill: '#444444', horizontalAlign: 'center' });
-		vbox.append(icon);
-
-		var label = new Ui.CompactLabel({ text: 'Tout le monde', fontSize: 14, margin: 3, width: 80, maxLine: 2, textAlign: 'center', color: '#67696c', horizontalAlign: 'center' });
-		vbox.append(label);
+		this.setIcon('earth');
+		this.setText('Tout le monde');
 	},
 	
 	onWorldRightAdd: function(selection) {

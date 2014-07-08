@@ -43,7 +43,7 @@ Ui.Pressable.extend('Wn.MessageView', {
 		else if(this.message.getType() == 'comment')
 			iconName = 'resource-comment';
 
-		var icon = new Wn.DualIcon({ width: 24, height: 24, icon: iconName, verticalAlign: 'top', horizontalAlign: 'left' });
+		var icon = new Ui.DualIcon({ width: 24, height: 24, icon: iconName, verticalAlign: 'top', horizontalAlign: 'left' });
 		lbox2.append(icon);
 
 		this.displayContent();

@@ -2,7 +2,6 @@
 Ui.Dialog.extend('Wn.AddContactDialog', {
 	user: undefined,
 	flow: undefined,
-	mainVbox: undefined,
 	searchField: undefined,
 	searchRequest: undefined,
 
@@ -13,22 +12,20 @@ Ui.Dialog.extend('Wn.AddContactDialog', {
 		delete(config.user);
 
 		this.setFullScrolling(true);
-		this.setPreferedWidth(450);
-		this.setPreferedHeight(450);
-		this.setTitle('Ajouter des contacts');
+		this.setPreferredWidth(500);
+		this.setPreferredHeight(500);
+		this.setTitle('Rechercher des contacts');
 
-		this.setCancelButton(new Ui.Button({ text: 'Fermer' }));
+		this.setCancelButton(new Ui.DialogCloseButton());
 
-		this.mainVbox = new Ui.VBox();
-		this.setContent(this.mainVbox);
-
-		this.searchField = new Ui.TextButtonField({ buttonIcon: 'search' });
-		this.mainVbox.append(this.searchField);
+		this.searchField = new Ui.TextButtonField({ buttonIcon: 'search', width: 150 });
+		Ui.Box.setResizable(this.searchField, true);
+		this.setActionButtons([ this.searchField ]);
 
 		this.connect(this.searchField, 'validate', this.onSearchValidate);
 
-		this.flow = new Ui.Flow();
-		this.mainVbox.append(this.flow);
+		this.flow = new Ui.Flow({ uniform: true, verticalAlign: 'top' });
+		this.setContent(this.flow);
 
 		// start a search on all available contacts
 		//this.onSearchValidate();
@@ -44,7 +41,8 @@ Ui.Dialog.extend('Wn.AddContactDialog', {
 		while(this.flow.getFirstChild() != undefined)
 			this.flow.remove(this.flow.getFirstChild());
 		// disable search
-		this.mainVbox.disable();
+		this.searchField.disable();
+		this.flow.disable();
 
 		this.searchRequest = new Core.HttpRequest({ method: 'GET', url: '/cloud/user?query='+encodeURIComponent(this.searchField.getValue()) });
 		this.connect(this.searchRequest, 'done', this.onSearchDone);
@@ -63,12 +61,15 @@ Ui.Dialog.extend('Wn.AddContactDialog', {
 				dialog: this, margin: 5
 			}));
 		}
-		this.mainVbox.enable();
+		this.searchField.enable();
+		this.flow.enable();
 		this.searchRequest = undefined;
 	},
 
 	onSearchError: function() {
-		this.mainVbox.enable();
+		// TODO: display the error
+		this.searchField.enable();
+		this.flow.enable();
 		this.searchRequest = undefined;
 	}
 });

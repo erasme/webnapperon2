@@ -25,7 +25,10 @@ Ui.LBox.extend('Wn.ContactSharesView', {
 		}
 		else {
 			if(this.shares === undefined) {
-				this.shares = new Ui.Flow({ uniform: true });
+				this.shares = new Ui.SFlow({
+					uniform: true, itemAlign: 'stretch',
+					margin: 40, spacing: 40
+				});
 				this.setContent(this.shares);
 			}
 
@@ -73,7 +76,10 @@ Ui.LBox.extend('Wn.ContactSharesView', {
 		var viewConst = Wn.ResourceView.getView(resource.getType());
 		if(viewConst === undefined)
 			viewConst = Wn.ResourceView;
-		var share = new viewConst({ user: this.user, contact: this.contact, resource: resource, margin: 5, width: 210, height: 244 });
+		var share = new viewConst({
+			user: this.user, contact: this.contact, resource: resource,
+			width: 180, height: 220
+		});
 		if(this.shares !== undefined)
 			this.shares.append(share);
 	}
@@ -97,78 +103,47 @@ Ui.LBox.extend('Wn.ContactSharesView', {
 Ui.LBox.extend('Wn.ContactView', {
 	user: undefined,
 	contact: undefined,
-	contactface: undefined,
 	contentbox: undefined,
-	addRemoveButton: undefined,
-	selection: undefined,
-	menuBox: undefined,
-	actionBox: undefined,
-	contextBox: undefined,
+	actions: undefined,
 
 	constructor: function(config) {
+		this.addEvents('change');
+
 		this.user = config.user;
 		delete(config.user);
 
 		this.contact = config.contact;
 		delete(config.contact);
 
+		this.actions = [];
+
 		var vbox = new Ui.VBox();
 		this.setContent(vbox);
-		
-		this.selection = new Ui.Selection();
-		this.connect(this.selection, 'change', this.onSelectionChange);
 
-		this.menuBox = new Ui.LBox();
-		vbox.append(this.menuBox);
-
-		this.actionBox = new Ui.MenuToolBar({ margin: 5, spacing: 5 });
-		this.menuBox.append(this.actionBox);
-
-		this.contactface = new Wn.UserFace({ user: this.contact });
-		this.actionBox.append(this.contactface);
-
-		this.contactlabel = new Wn.UserTitle({ text: '', marginLeft: 10, marginRight: 10, textAlign: 'left', verticalAlign: 'center' });
-		if(this.contact.getIsReady())
-			this.contactlabel.setText(this.contact.getFirstname()+' '+this.contact.getLastname());
-		this.actionBox.append(this.contactlabel, true);
-
-		if(navigator.supportWebRTC) {
-			var button = new Ui.Button({ icon: 'phone' });
-			this.connect(button, 'press', this.onPhonePress);
-			this.actionBox.append(button);
-		}
-
-		var button = new Ui.Button({ icon: 'bubble' });
+		var button = new Ui.Button({ icon: 'bubble', text: 'Message' });
 		this.connect(button, 'press', this.onMessagesPress);
-		this.actionBox.append(button);
+		this.actions.push(button);
 		
 		// view the contact profil
-		var button = new Ui.Button({ icon: 'person' });
-		this.connect(button, 'press', this.onProfilPress);
-		this.actionBox.append(button);
-
-		// the context menu
-		this.contextBox = new Ui.ContextBar({ selection: this.selection });
-		this.contextBox.hide();
-		this.menuBox.append(this.contextBox);
+//		var button = new Ui.Button({ icon: 'person', text: 'Profil' });
+//		this.connect(button, 'press', this.onProfilPress);
+//		this.actions.push(button);
 
 		var scroll = new Ui.ScrollingArea({ scrollHorizontal: false });
 		vbox.append(scroll, true);
 		scroll.setContent(new Wn.ContactSharesView({ user: this.user, contact: this.contact }), true);
 	},
 
-	// implement a selection handler for Selectionable elements
-	getSelectionHandler: function() {
-		return this.selection;
-	},
-	
-	onProfilPress: function() {
-		var dialog = new Wn.UserProfil({ user: this.contact });
-		dialog.open();
+	getTitle: function() {
+		return this.contact.getName();
 	},
 
-	onPhonePress: function() {
-		var dialog = new Wn.VideoConfDialog({ user: this.user, contact: this.contact });
+	getActions: function() {
+		return this.actions;
+	},
+
+	onProfilPress: function() {
+		var dialog = new Wn.UserProfil({ user: this.contact });
 		dialog.open();
 	},
 
@@ -178,18 +153,7 @@ Ui.LBox.extend('Wn.ContactView', {
 	},
 
 	onContactChange: function() {
-		this.contactlabel.setText(this.contact.getFirstname()+' '+this.contact.getLastname());
-	},
-
-	onSelectionChange: function(selection) {
-		if(selection.getElements().length === 0) {
-			this.contextBox.hide();
-			this.actionBox.show();
-		}
-		else {
-			this.contextBox.show();
-			this.actionBox.hide();
-		}
+		this.fireEvent('change', this);
 	}
 }, {
 	onLoad: function() {

@@ -40,6 +40,7 @@ using Erasme.Json;
 using Erasme.Cloud;
 using Erasme.Cloud.Logger;
 using Erasme.Cloud.Storage;
+using Erasme.Cloud.Utils;
 using Webnapperon2.User;
 
 namespace Webnapperon2.Podcast
@@ -48,14 +49,15 @@ namespace Webnapperon2.Podcast
 	{
 		StorageService storageService;
 		ILogger logger;
-		TaskFactory longRunningTaskFactory;
+		PriorityTaskScheduler longRunningTaskScheduler;
 		object instanceLock = new object();
-		Dictionary<string,Task> runningTasks = new Dictionary<string, Task>();
+		Dictionary<string,LongTask> runningTasks = new Dictionary<string, LongTask>();
 
-		public PodcastService(string basePath, StorageService storageService, TaskFactory longRunningTaskFactory, ILogger logger)
+		public PodcastService(string basePath, StorageService storageService,
+			PriorityTaskScheduler longRunningTaskScheduler, ILogger logger)
 		{
 			this.storageService = storageService;
-			this.longRunningTaskFactory = longRunningTaskFactory;
+			this.longRunningTaskScheduler = longRunningTaskScheduler;
 			this.logger = logger;
 		}
 
@@ -210,23 +212,20 @@ namespace Webnapperon2.Podcast
 				}
 			}
 			// update podcast update values
-			long quota, used, ctime, mtime, rev;
-			storageService.GetStorageInfo(storage, out quota, out used, out ctime, out mtime, out rev);
 			JsonValue diff = new JsonObject();
-			diff["rev"] = rev;
 			diff["failcount"] = 0;
 			diff["utime"] = (long)(DateTime.UtcNow.Ticks / 10000);
-			UserService.ChangeResource(id, diff, null);
+			UserService.ChangeResourceUpdateStorage(data, diff);
 		}
 
 		public void QueueUpdatePodcast(JsonValue data)
 		{
-			Task task = null;
+			LongTask task = null;
 			string id = data["id"];
 			long failcount = data["failcount"];
 			lock(instanceLock) {
-				if(!runningTasks.ContainsKey(id.ToString())) {
-					task = new Task(delegate {
+				if(!runningTasks.ContainsKey(id)) {
+					task = new LongTask(delegate {
 						try {
 							UpdatePodcast(id);
 						}
@@ -235,21 +234,22 @@ namespace Webnapperon2.Podcast
 							// mark the fail in the db
 							JsonValue diff = new JsonObject();
 							diff["failcount"] = failcount + 1;
+							diff["utime"] = (long)(DateTime.UtcNow.Ticks / 10000);
 							UserService.ChangeResource(id, diff, null);
 
 						} finally {
 							// remove the task
 							lock(instanceLock) {
-								if(runningTasks.ContainsKey(id.ToString()))
-									runningTasks.Remove(id.ToString());
+								if(runningTasks.ContainsKey(id))
+									runningTasks.Remove(id);
 							}
 						}
-					});
-					runningTasks[id.ToString()] = task;
+					}, null, "Update podcast "+id, LongTaskPriority.Low);
+					runningTasks[id] = task;
 				}
 			}
 			if(task != null)
-				task.Start(longRunningTaskFactory.Scheduler);
+				longRunningTaskScheduler.Start(task);
 		}
 	}
 }

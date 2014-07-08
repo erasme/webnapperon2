@@ -8,16 +8,16 @@ Ui.Dialog.extend('Wn.ResourceDeleteDialog', {
 		this.resource = config.resource;
 		delete(config.resource);
 		
-		this.setPreferedWidth(300);
-		this.setPreferedHeight(200);
+		this.setPreferredWidth(300);
+		this.setPreferredHeight(200);
 		this.setFullScrolling(true);
 		this.setTitle('Suppression');
 		
 		if(Ui.App.current.getUser().isAdmin() || this.resource.canWrite()) {
-			this.setCancelButton(new Ui.Button({ text: 'Annuler' }));
+			this.setCancelButton(new Ui.DialogCloseButton({ text: 'Annuler' }));
 			this.setContent(new Ui.Text({ text: 'Voulez vous vraiment supprimer cette ressource pour vous et toutes les personnes avec qui vous la partagée ?' }));
 		
-			var removeButton = new Wn.AlertButton({ text: 'Supprimer' });
+			var removeButton = new Ui.DefaultButton({ text: 'Supprimer' });
 			this.connect(removeButton, 'press', function() {
 				this.close();
 				this.resource.deleteResource();
@@ -26,7 +26,7 @@ Ui.Dialog.extend('Wn.ResourceDeleteDialog', {
 			this.setActionButtons([ removeButton ]);
 		}
 		else {
-			this.setCancelButton(new Ui.Button({ text: 'Fermer' }));
+			this.setCancelButton(new Ui.DialogCloseButton());
 			this.setContent(new Ui.Text({ text: 'Voulez n\'avez pas les droits nécessaires pour supprimer cette ressource' }));
 		}
 	}
@@ -39,32 +39,26 @@ Ui.CompactLabel.extend('Wn.ResourceViewerTitle', {
 	}
 });
 
-Ui.VBox.extend('Wn.ResourceViewer', {
+Ui.DropBox.extend('Wn.ResourceViewer', {
 	resource: undefined,
 	path: undefined,
 	user: undefined,
 	contact: undefined,
-	contactface: undefined,
-	contentBox: undefined,
-	resourcelabel: undefined,
 	isFullscreen: false,
-	unfullscreenButton: undefined,
-	selection: undefined,
-	menuBox: undefined,
-	actionBox: undefined,
-	contextBox: undefined,
 	propertyButton: undefined,
-	fullscreenButton: undefined,
-	bookmarkButton: undefined,
+	actions: undefined,
+	actionButtons: undefined,
 
 	constructor: function(config) {
-		this.addEvents('fullscreen', 'unfullscreen');
+		this.addEvents('change');
 
 		this.user = config.user;
 		delete(config.user);
 		this.resource = config.resource;
 		delete(config.resource);
-		
+
+		this.actions = [];
+
 		if('contact' in config) {
 			this.contact = config.contact;
 			delete(config.contact);
@@ -74,95 +68,52 @@ Ui.VBox.extend('Wn.ResourceViewer', {
 			delete(config.path);
 		}
 
-		this.selection = new Ui.Selection();
-		this.connect(this.selection, 'change', this.onSelectionChange);
-
-		this.menuBox = new Ui.LBox();
-		this.append(this.menuBox);
-
-		this.actionBox = new Ui.MenuToolBar({ margin: 5, spacing: 5 });
-		this.menuBox.append(this.actionBox);
-		
-		this.contextBox = new Ui.ContextBar({ selection: this.selection });
-		this.contextBox.hide();
-		this.menuBox.append(this.contextBox);
-		
-		this.contactface = new Wn.UserFace({ user: (this.contact !== undefined)?this.contact:this.user });
-		this.actionBox.append(this.contactface);
-		
-		this.resourcelabel = new Wn.ResourceViewerTitle({ text: '', marginLeft: 10, marginRight: 10, textAlign: 'left', verticalAlign: 'center' });
-		this.resourcelabel.setText(this.resource.getName());
-		this.actionBox.append(this.resourcelabel, true);
-
-		this.propertyButton = new Ui.Button({ icon: 'tools' });
-		this.actionBox.append(this.propertyButton);
+		this.propertyButton = new Ui.Button({ icon: 'resourcetools', text: 'Outils' });
+		this.actions.push(this.propertyButton);
 		this.connect(this.propertyButton, 'press', function() {
 			var dialog = new Wn.ResourcePropertiesDialog({ user: this.user, resource: this.resource });
 			dialog.open();
 		});
 
-//		if(this.resource.canWrite()) {
-//			var deleteButton = new Ui.Button({ icon: 'trash' });
-//			this.connect(deleteButton, 'press', this.onDeletePress);
-//			this.actionButtons.append(deleteButton);
-//		}
+		this.addMimetype(Wn.MenuContact);
+		this.connect(this, 'drop', this.onUserDrop);
 
-		this.fullscreenButton = new Ui.Button({ icon: 'fullscreen' });
-		this.actionBox.append(this.fullscreenButton);
-		this.connect(this.fullscreenButton, 'press', function() {
-			this.fullscreen();
-		});
-		
-		if(this.contact != undefined) {
-			this.bookmarkButton = new Ui.ToggleButton({ icon: 'star' });
-			if(this.resource.getBookmark())
-				this.bookmarkButton.toggle();
-			this.connect(this.bookmarkButton, 'toggle', this.onBookmarkToggle);
-			this.connect(this.bookmarkButton, 'untoggle', this.onBookmarkUntoggle);
-			this.actionBox.append(this.bookmarkButton);
-		}
-
-		this.contentBox = new Ui.LBox();
-		this.append(this.contentBox, true);
-		
 		// if mark the resource as seen
 		this.resource.markSeenByMe();
 
 		this.user.watchResource(this.getResource());
 	},
 
-	// implement a selection handler for Selectionable elements
-	getSelectionHandler: function() {
-		return this.selection;
+	getTitle: function() {
+		return this.resource.getName();
 	},
 
+	getActions: function() {
+		if((this.actionButtons === undefined) || (this.actionButtons.length === 0))
+			return this.actions;
+		else {
+			var i;
+			var buttons = [];
+			for(i = 0; i < this.actionButtons.length; i++)
+				buttons.push(this.actionButtons[i]);
+			for(i = 0; i < this.actions.length; i++)
+				buttons.push(this.actions[i]);
+			return buttons;
+		}
+	},
+	
 	getIsFullscreen: function() {
 		return this.isFullscreen;
 	},
 
 	fullscreen: function() {
-		if(!this.isFullscreen) {
+		if(!this.isFullscreen)
 			this.isFullscreen = true;
-			this.remove(this.menuBox);
-
-			this.unfullscreenButton = new Ui.Pressable({ verticalAlign: 'top', horizontalAlign: 'right' });
-			this.unfullscreenButton.append(new Ui.Rectangle({ radius: 8, margin: 5, fill: 'white', opacity: 0.4 }));
-			this.unfullscreenButton.append(new Ui.Icon({ icon: 'unfullscreen', fill: 'black', width: 48, height: 48, margin: 10, opacity: 0.3 }));
-			this.connect(this.unfullscreenButton, 'press', this.unfullscreen);
-
-			this.contentBox.append(this.unfullscreenButton);
-
-			this.fireEvent('fullscreen', this);
-		}
 	},
 
 	unfullscreen: function() {
-		if(this.isFullscreen) {
+		if(this.isFullscreen)
 			this.isFullscreen = false;
-			this.contentBox.remove(this.unfullscreenButton);
-			this.prepend(this.menuBox);
-			this.fireEvent('unfullscreen', this);
-		}
 	},
 
 	deleteResource: function() {
@@ -171,16 +122,8 @@ Ui.VBox.extend('Wn.ResourceViewer', {
 	},
 
 	setActionButtons: function(actionButtons) {
-		var buttons = [];
-		buttons.push(this.contactface);
-		buttons.push(this.resourcelabel);
-		for(var i = 0; i < actionButtons.length; i++)
-			buttons.push(actionButtons[i]);
-		buttons.push(this.propertyButton);
-		buttons.push(this.fullscreenButton);
-		if(this.bookmarkButton !== undefined)
-			buttons.push(this.bookmarkButton);
-		this.actionBox.setContent(buttons);
+		this.actionButtons = actionButtons;
+		this.fireEvent('change', this);
 	},
 
 	getResource: function() {
@@ -192,7 +135,7 @@ Ui.VBox.extend('Wn.ResourceViewer', {
 	},
 
 	setPath: function(path) {
-		if(this.path != path) {
+		if(this.path !== path) {
 			this.onPathChange(this.path, path);
 			this.path = path;
 		}
@@ -202,11 +145,20 @@ Ui.VBox.extend('Wn.ResourceViewer', {
 		return this.user;
 	},
 
+	onUserDrop: function(dropbox, mimetype, data) {
+		if(this.resource.canShare()) {
+			var diff = { user_id: data.getContact().getId(), read: true, share: this.user.getData().default_share_right };
+			if(this.resource.canWrite() && this.user.getData().default_write_right)
+				diff.write = true;	
+			this.resource.addRights(diff);
+		}
+	},
+
 	onPathChange: function(oldPath, newPath) {
 	},
 
 	onResourceChange: function() {
-		this.resourcelabel.setText(this.resource.getName());
+		this.fireEvent('change', this);
 		this.resource.markSeenByMe();
 	},
 
@@ -215,12 +167,15 @@ Ui.VBox.extend('Wn.ResourceViewer', {
 			return;
 
 		var dialog = new Ui.Dialog({
-			preferedWidth: 300,
-			preferedHeight: 200,
+			preferredWidth: 300,
+			preferredHeight: 200,
 			fullScrolling: true,
 			title: 'Suppression',
 			cancelButton: new Ui.Button({ text: 'Annuler' }),
-			content: new Ui.Text({ text: 'Voulez vous vraiment supprimer cette ressource pour vous et toutes les personnes avec qui vous la partagée ?' })
+			content: new Ui.Text({ text:
+				'Voulez vous vraiment supprimer cette ressource pour vous'+
+				' et toutes les personnes avec qui vous la partagée ?'
+			})
 		});
 		var removeButton = new Wn.AlertButton({ text: 'Supprimer' });
 		this.connect(removeButton, 'press', function() {
@@ -231,14 +186,6 @@ Ui.VBox.extend('Wn.ResourceViewer', {
 		dialog.open();
 	},
 
-	onBookmarkToggle: function() {
-		this.user.bookmarkResource(this.resource);
-	},
-
-	onBookmarkUntoggle: function() {
-		this.user.unbookmarkResource(this.resource);
-	},
-	
 	onSelectionChange: function(selection) {
 		if(selection.getElements().length === 0) {
 			this.contextBox.hide();
@@ -251,10 +198,6 @@ Ui.VBox.extend('Wn.ResourceViewer', {
 	}
 
 }, {
-	setContent: function(content) {
-		this.contentBox.setContent(content);
-	},
-	
 	onLoad: function() {
 		Wn.ResourceViewer.base.onLoad.call(this);
 		this.connect(this.resource, 'change', this.onResourceChange);
@@ -265,6 +208,10 @@ Ui.VBox.extend('Wn.ResourceViewer', {
 		this.disconnect(this.resource, 'change', this.onResourceChange);
 	}
 }, {
+	style: {
+		background: '#f1f1f1'
+	},
+
 	apps: undefined,
 
 	constructor: function() {

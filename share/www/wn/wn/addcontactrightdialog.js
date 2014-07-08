@@ -18,11 +18,11 @@ Ui.Dialog.extend('Wn.AddContactRightDialog', {
 		delete(config.resource);
 
 		this.setFullScrolling(true);
-		this.setPreferedWidth(400);
-		this.setPreferedHeight(400);
+		this.setPreferredWidth(400);
+		this.setPreferredHeight(400);
 		this.setTitle('Ajouter des partages');
 
-		this.setCancelButton(new Ui.Button({ text: 'Fermer' }));
+		this.setCancelButton(new Ui.DialogCloseButton());
 
 		this.mainVbox = new Ui.VBox();
 		this.setContent(this.mainVbox);
@@ -45,7 +45,7 @@ Ui.Dialog.extend('Wn.AddContactRightDialog', {
 		this.shareField.setValue(this.user.getData().default_share_right);
 		hbox.append(this.shareField);
 
-		this.flow = new Ui.Flow();
+		this.flow = new Ui.Flow({ uniform: true });
 		this.mainVbox.append(this.flow);
 
 		if(!this.resource.getPublicRights().read)

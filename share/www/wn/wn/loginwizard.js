@@ -1,20 +1,34 @@
 
 Wn.WizardItem.extend('Wn.LoginWizardSelector', {
 	selectItem: undefined,
+	setup: undefined,
 
 	constructor: function(config) {
 		this.addEvents('choose');
-		
-		var vbox = new Ui.VBox({ uniform: true, spacing: 10 });
-		this.setContent(vbox);
 
-		var types = Wn.LoginWizard.getWizardTypes();
-		for(var i = 0; i < types.length; i++) {
-			var def = Wn.LoginWizard.getWizard(types[i]);
-			var item = new Ui.Button({ icon: def.icon, text: def.name, orientation: 'horizontal' });
-			this.connect(item, 'press', this.onItemPress);
-			item.hostLoginWizardSelector = types[i];
-			vbox.append(item);
+		this.setup = config.setup;
+		delete(config.setup);
+
+		var vbox2 = new Ui.VBox({ spacing: 10 });
+		this.setContent(vbox2);
+
+		vbox2.append(new Wn.RatioImage({ src: 'img/login_logo.png' }));
+
+		var vbox = new Ui.VBox({ uniform: true, spacing: 10 });
+		vbox2.append(vbox);
+
+		for(var i = 0; i < this.setup.authentication.services.length; i++) {
+			var service = this.setup.authentication.services[i];
+			var def = Wn.LoginWizard.getWizard(service.type);
+			if(def !== undefined) {
+				var name = def.name;
+				if(service.name !== undefined)
+					name = service.name;
+				var item = new Ui.Button({ icon: def.icon, text: name, orientation: 'horizontal' });
+				this.connect(item, 'press', this.onItemPress);
+				item.hostLoginWizardSelector = service.type;
+				vbox.append(item);
+			}
 		}
 		delete(config.wizardType);
 	},
@@ -37,26 +51,32 @@ Ui.Dialog.extend('Wn.LoginWizard', {
 	current: undefined,
 	wizardType: undefined,
 	data: undefined,
+	setup: undefined,
 
 	constructor: function(config) {
 		this.addEvents('done');
+
+		this.setup = config.setup;
+		delete(config.setup);
+
+		this.setAutoClose(false);
 		this.setTitle('Connexion');
 		this.setFullScrolling(true);
-		this.setPreferedWidth(450);
-		this.setPreferedHeight(450);
+		this.setPreferredWidth(450);
+		this.setPreferredHeight(450);
 
 		this.data = {};
 
 		this.previousButton = new Ui.Button({ text: 'Précédent' });
 		this.previousButton.hide();
 		this.connect(this.previousButton, 'press', this.onPreviousPress);
-		this.nextButton = new Ui.Button({ text: 'Suivant' });
+		this.nextButton = new Ui.DefaultButton({ text: 'Suivant' });
 		this.connect(this.nextButton, 'press', this.onNextPress);
 
 		this.transBox = new Ui.TransitionBox();
 		this.setContent(this.transBox);
 
-		this.current = new Wn.LoginWizardSelector();
+		this.current = new Wn.LoginWizardSelector({ setup: this.setup });
 		this.transBox.replaceContent(this.current);
 		this.connect(this.current, 'done', this.onItemDone);
 		this.nextButton.disable();
@@ -71,7 +91,7 @@ Ui.Dialog.extend('Wn.LoginWizard', {
 			this.position = 0;
 		if(this.position == 0) {
 			this.setTitle('Connexion');
-			this.current = new Wn.LoginWizardSelector({ wizardType: this.wizardType });
+			this.current = new Wn.LoginWizardSelector({ wizardType: this.wizardType, setup: this.setup });
 			this.previousButton.hide();
 
 			this.setActionButtons(undefined);
@@ -98,6 +118,15 @@ Ui.Dialog.extend('Wn.LoginWizard', {
 		this.nextButton.enable();
 	},
 
+	findSetup: function(type) {
+		for(var i = 0; i < this.setup.authentication.services.length; i++) {
+			var service = this.setup.authentication.services[i];
+			if(service.type === type)
+				return service;
+		}
+		return undefined;
+	},
+
 	onNextPress: function() {
 		this.position++;
 		this.disconnect(this.current, 'done', this.onItemDone);
@@ -114,6 +143,7 @@ Ui.Dialog.extend('Wn.LoginWizard', {
 			}
 		}
 		var def = Wn.LoginWizard.getWizard(this.wizardType);
+		var setup = this.findSetup(this.wizardType);
 
 		if(this.position > def.array.length) {
 			var creator = new def.creator({ data: this.data, item: this.current });
@@ -123,7 +153,7 @@ Ui.Dialog.extend('Wn.LoginWizard', {
 			this.connect(creator, 'fail', this.onCreatorFail);
 		}
 		else {
-			this.setTitle(def.name);
+			this.setTitle((setup.name !== undefined)?setup.name:def.name);
 			this.current = new def.array[this.position - 1]({ data: this.data });
 
 			if(this.position == def.array.length)

@@ -1,4 +1,4 @@
-
+/*
 Ui.Selectionable.extend('Wn.WebAccount', {
 	label: undefined,
 	accountIcon: undefined,
@@ -13,7 +13,7 @@ Ui.Selectionable.extend('Wn.WebAccount', {
 		var vbox = new Ui.VBox({ margin: 0 });
 		this.setContent(vbox);
 	
-		this.accountIcon = new Ui.Icon({ icon: 'google', width: 48, height: 48, fill: '#444444', horizontalAlign: 'center' });
+		this.accountIcon = new Ui.Icon({ icon: 'google', width: 48, height: 48, horizontalAlign: 'center' });
 		vbox.append(this.accountIcon);
 	
 		this.label = new Ui.CompactLabel({ width: 80, maxLine: 2, textAlign: 'center' });
@@ -47,6 +47,66 @@ Ui.Selectionable.extend('Wn.WebAccount', {
 			count++;
 		return count > 1;
 	}
+}, {
+	updateColors: function() {
+		Wn.WebAccount.base.updateColors.apply(this, arguments);
+		var fg = this.getForeground();
+		this.accountIcon.setFill(fg);
+		this.label.setColor(fg);
+	}
+});
+*/
+
+Wn.SelectionButton.extend('Wn.WebAccount', {
+	user: undefined,
+
+	constructor: function(config) {	
+		this.addEvents('delete');
+
+		this.user = config.user;
+		delete(config.user);
+		
+		this.setIcon('google');	
+	
+//		this.label = new Ui.CompactLabel({ width: 80, maxLine: 2, textAlign: 'center' });
+//		vbox.append(this.label);
+	},
+	
+	getUser: function() {
+		return this.user;
+	},
+	
+	setAccountIcon: function(icon) {
+		this.setIcon(icon);
+//		this.accountIcon.setIcon(icon);
+	},
+	
+//	setText: function(text) {
+//		this.label.setText(text);
+//	},
+	
+	"delete": function() {
+		this.fireEvent('delete', this);
+	},
+	
+	testDeleteRight: function() {
+		var data = this.user.getData();
+		var count = 0;
+		if(data.login !== null)
+			count++;
+		if(data.googleid !== null)
+			count++;	
+		if(data.facebookid !== null)
+			count++;
+		return count > 1;
+	}
+}, {
+//	updateColors: function() {
+//		Wn.WebAccount.base.updateColors.apply(this, arguments);
+//		var fg = this.getForeground();
+//		this.accountIcon.setFill(fg);
+//		this.label.setColor(fg);
+//	}
 });
 
 Ui.Dialog.extend('Wn.WebAccountNewDialog', {
@@ -60,10 +120,10 @@ Ui.Dialog.extend('Wn.WebAccountNewDialog', {
 		delete(config.user);
 				
 		this.setTitle('Nouveau compte Web');
-		this.setPreferedWidth(400);
-		this.setPreferedHeight(400);
+		this.setPreferredWidth(400);
+		this.setPreferredHeight(400);
 		
-		this.setCancelButton(new Ui.Button({ text: 'Fermer' }));
+		this.setCancelButton(new Ui.DialogCloseButton());
 		
 		var vbox = new Ui.VBox({ spacing: 5 });
 		this.setContent(vbox);
@@ -93,19 +153,11 @@ Ui.Dialog.extend('Wn.WebAccountNewDialog', {
 		var vbox = new Ui.VBox({ spacing: 10 });
 		this.setContent(vbox);
 		
-		var loginField = new Ui.TextField();
+		var loginField = new Wn.TextField({ title: 'Identifiant' });
+		vbox.append(loginField);
 
-		var hbox = new Ui.HBox({ spacing: 10 });
-		hbox.append(new Ui.Text({ text: 'Identifiant', textAlign: 'right', verticalAlign: 'center', width: 100 }));
-		hbox.append(loginField, true);
-		vbox.append(hbox);
-
-		passwordField = new Ui.TextField({ passwordMode: true });
-
-		hbox = new Ui.HBox({ spacing: 10 });
-		hbox.append(new Ui.Text({ text: 'Mot de passe', textAlign: 'right', verticalAlign: 'center', width: 100 }));
-		hbox.append(passwordField, true);
-		vbox.append(hbox);
+		passwordField = new Wn.TextField({ title: 'Mot de passe', passwordMode: true });
+		vbox.append(passwordField);
 
 		var errorMessage = new Ui.Text({ color: 'red' });
 		errorMessage.hide();
@@ -113,7 +165,7 @@ Ui.Dialog.extend('Wn.WebAccountNewDialog', {
 		
 		var errorTimeout = undefined;
 						
-		var createButton = new Ui.Button({ text: 'Créer' });
+		var createButton = new Ui.DefaultButton({ text: 'Créer' });
 		this.connect(createButton, 'press', function() {
 			var request = new Core.HttpRequest({ method: 'PUT',
 				url: '/cloud/user/'+this.user.getId(),
@@ -186,9 +238,9 @@ Ui.Dialog.extend('Wn.GoogleAccountDialog', {
 		this.account = config.account;
 		delete(config.account);
 	
-		this.setPreferedWidth(400);
+		this.setPreferredWidth(400);
 		this.setTitle('Compte Google');
-		this.setCancelButton(new Ui.Button({ text: 'Fermer' }));
+		this.setCancelButton(new Ui.DialogCloseButton());
 		
 		var deleteButton = new Ui.Button({ text: 'Supprimer' });
 		this.connect(deleteButton, 'press', this.onDeletePress);
@@ -261,9 +313,9 @@ Ui.Dialog.extend('Wn.FacebookAccountDialog', {
 		this.account = config.account;
 		delete(config.account);
 	
-		this.setPreferedWidth(400);
+		this.setPreferredWidth(400);
 		this.setTitle('Compte Facebook');
-		this.setCancelButton(new Ui.Button({ text: 'Fermer' }));
+		this.setCancelButton(new Ui.DialogCloseButton());
 		
 		var deleteButton = new Ui.Button({ text: 'Supprimer' });
 		this.connect(deleteButton, 'press', this.onDeletePress);
@@ -343,31 +395,23 @@ Ui.Dialog.extend('Wn.LocalAccountDialog', {
 		this.account = config.account;
 		delete(config.account);
 	
-		this.setPreferedWidth(400);
+		this.setPreferredWidth(400);
 		this.setTitle('Compte HOST');
-		this.setCancelButton(new Ui.Button({ text: 'Fermer' }));
+		this.setCancelButton(new Ui.DialogCloseButton());
 		
 		this.deleteButton = new Ui.Button({ text: 'Supprimer' });
 		this.connect(this.deleteButton, 'press', this.onDeletePress);
-		this.saveButton = new Ui.Button({ text: 'Enregistrer' });
+		this.saveButton = new Ui.DefaultButton({ text: 'Enregistrer' });
 		this.connect(this.saveButton, 'press', this.onSavePress);
 		
 		var vbox = new Ui.VBox({ spacing: 10 });
 		this.setContent(vbox);
 		
-		this.loginField = new Ui.TextField({ value: this.user.getData().login });
+		this.loginField = new Wn.TextField({ title: 'Identifiant', value: this.user.getData().login });
+		vbox.append(this.loginField);
 
-		var hbox = new Ui.HBox({ spacing: 10 });
-		hbox.append(new Ui.Text({ text: 'Identifiant', textAlign: 'right', verticalAlign: 'center', width: 100 }));
-		hbox.append(this.loginField, true);
-		vbox.append(hbox);
-
-		this.passwordField = new Ui.TextField({ textHolder: '********', passwordMode: true });
-
-		hbox = new Ui.HBox({ spacing: 10 });
-		hbox.append(new Ui.Text({ text: 'Mot de passe', textAlign: 'right', verticalAlign: 'center', width: 100 }));
-		hbox.append(this.passwordField, true);
-		vbox.append(hbox);
+		this.passwordField = new Wn.TextField({ title: 'Mot de passe', textHolder: '********', passwordMode: true });
+		vbox.append(this.passwordField);
 		
 		this.errorMessage = new Ui.Text({ color: 'red' });
 		this.errorMessage.hide();
@@ -500,8 +544,7 @@ Wn.OptionSection.extend('Wn.WebAccountSection', {
 		this.flow = new Ui.Flow({ uniform: true });
 		this.setContent(this.flow);
 				
-		this.plus = new Ui.Pressable();
-		this.plus.setContent(new Ui.Icon({ icon: 'plus', width: 48, height: 48, fill: '#444444', verticalAlign: 'center', horizontalAlign: 'center' }));
+		this.plus = new Wn.ListAddButton({ verticalAlign: 'center', horizontalAlign: 'center' });
 		this.flow.append(this.plus);
 		this.connect(this.plus, 'press', this.onPlusPress);
 	},

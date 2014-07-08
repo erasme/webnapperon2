@@ -17,12 +17,12 @@ Ui.Dialog.extend('Storage.FilePropertiesDialog', {
 		this.storage = config.storage;
 		delete(config.storage);
 	
-		this.setPreferedWidth(500);
-		this.setPreferedHeight(500);
+		this.setPreferredWidth(500);
+		this.setPreferredHeight(500);
 		this.setFullScrolling(true);
 
 		this.setTitle('Propriétés du fichier');
-		this.setCancelButton(new Ui.Button({ text: 'Fermer' }));
+		this.setCancelButton(new Ui.DialogCloseButton());
 
 		var mainVbox = new Ui.VBox({});
 		this.setContent(mainVbox);
@@ -66,7 +66,7 @@ Ui.Dialog.extend('Storage.FilePropertiesDialog', {
 			this.deleteButton = new Wn.AlertButton({ text: 'Supprimer' });
 			this.connect(this.deleteButton, 'press', this.onDeletePress);
 
-			this.saveButton = new Ui.Button({ text: 'Enregistrer' });
+			this.saveButton = new Ui.DefaultButton({ text: 'Enregistrer' });
 			this.connect(this.saveButton, 'press', this.onSavePress);
 
 			this.setActionButtons([ this.deleteButton, this.saveButton ]);

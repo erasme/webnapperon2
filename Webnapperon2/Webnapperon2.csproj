@@ -42,6 +42,7 @@
     </Reference>
     <Reference Include="Mono.Posix" />
     <Reference Include="System.Xml.Linq" />
+    <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Main.cs" />
@@ -68,12 +69,12 @@
     <Compile Include="Server.cs" />
     <Compile Include="WebException.cs" />
     <Compile Include="Webnapperon2.Message\MessageRights.cs" />
-    <Compile Include="Webnapperon2.User\UserPlugin.cs" />
     <Compile Include="Webnapperon2.PathLog\IPathLogRights.cs" />
     <Compile Include="Webnapperon2.PathLog\PathLogRights.cs" />
     <Compile Include="Webnapperon2.Storage\StorageRights.cs" />
     <Compile Include="Webnapperon2.Manage\ManageRights.cs" />
     <Compile Include="Webnapperon2.Authentication\AuthSessionRights.cs" />
+    <Compile Include="Webnapperon2.Wallpaper\WallpaperService.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
@@ -94,5 +95,9 @@
     <Folder Include="Webnapperon2.Storage\" />
     <Folder Include="Webnapperon2.Manage\" />
     <Folder Include="Webnapperon2.Authentication\" />
+    <Folder Include="Webnapperon2.Wallpaper\" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="webnapperon2.setup" />
   </ItemGroup>
 </Project>

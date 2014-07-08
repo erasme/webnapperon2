@@ -1,7 +1,7 @@
 
 Ui.CanvasElement.extend('Wn.ScaledImage', {
 	image: undefined,
-	
+
 	constructor: function(config) {
 		this.image = new Ui.Image();
 		this.connect(this.image, 'ready', this.onImageReady);
@@ -21,6 +21,8 @@ Ui.CanvasElement.extend('Wn.ScaledImage', {
 		this.invalidateDraw();
 	}
 }, {
+	canvasEngine: 'canvas', 
+
 	updateCanvas: function(ctx) {
 		// image
 		if(this.image.getIsReady()) {

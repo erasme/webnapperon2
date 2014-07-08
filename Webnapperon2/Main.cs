@@ -1,16 +1,41 @@
 using System;
 using System.IO;
+using System.Text;
+using System.Threading;
 using System.Reflection;
 using System.Xml.Serialization;
 using Mono.Unix;
 using Mono.Unix.Native;
+using Erasme.Json;
 
 namespace Webnapperon2
 {
 	class MainClass
 	{
+		public static JsonValue ReadCommentedJson(Stream stream)
+		{
+			StringBuilder sb = new StringBuilder();
+			using(StreamReader reader = new StreamReader(stream)) {
+				while(!reader.EndOfStream) {
+					string line = reader.ReadLine();
+					if(!(line.TrimStart(' ', '\t')).StartsWith("//"))
+						sb.Append(line);
+				}
+			}
+			return JsonValue.Parse(sb.ToString());
+		}
+
 		public static void Main(string[] args)
 		{
+			// the default ThreadPool of Mono seems to be empty
+			ThreadPool.SetMinThreads(Environment.ProcessorCount, Environment.ProcessorCount*2);
+
+			// load the default setup from an embended resource
+			dynamic setup;
+			using(Stream stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("Webnapperon2.webnapperon2.setup")) {
+				setup = ReadCommentedJson(stream);
+			}
+
 			// get the config file from args
 			string configFile = null;
 			for(int i = 0; i < args.Length; i++) {
@@ -18,26 +43,25 @@ namespace Webnapperon2
 					configFile = args[++i];
 			}
 
-			Setup setup;
-			Server server;
-
-			// load the config file
+			// load the current setup
 			if(configFile != null) {
+				JsonValue currentSetup;
 				using(FileStream stream = File.OpenRead(configFile)) {
-					XmlSerializer serializer = new XmlSerializer(typeof(Setup));
-					setup = (Setup)serializer.Deserialize(stream);
+					currentSetup = ReadCommentedJson(stream);
 				}
-				Console.WriteLine("Setup loaded from '"+configFile+"'");
+				setup.Merge(currentSetup);
+				Console.WriteLine("Setup loaded from '" + configFile + "'");
 			}
 			else {
-				setup = new Setup();
 				Console.WriteLine("Default setup loaded");
 			}
 
+			Server server;
+
 			// clean/create temporary dir
-			if(Directory.Exists(setup.TemporaryDirectory))
-				Directory.Delete(setup.TemporaryDirectory, true);
-			Directory.CreateDirectory(setup.TemporaryDirectory);
+			if(Directory.Exists(setup.server.temporaryDirectory))
+				Directory.Delete(setup.server.temporaryDirectory, true);
+			Directory.CreateDirectory(setup.server.temporaryDirectory);
 
 			server = new Server(setup);
 			server.Start();

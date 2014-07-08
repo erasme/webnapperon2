@@ -15,7 +15,7 @@ Ui.CanvasElement.extend('Wn.ContentBgGraphic', {
 		ctx.roundRectFilledShadow(0, 0, w, h, 3, 3, 3, 3, false, 2, new Ui.Color({ a: 0.2 }));
 
 		// content background
-		var c = 'rgb(240,240,240)';
+		var c = '#f8f8f8';
 		if(this.color != undefined)
 			c = this.color.getCssRgba();
 		ctx.fillStyle =  c;

@@ -6,5 +6,5 @@ Wn.WizardItem.extend('Wn.Google.Wizard', {
 	}
 });
 
-Wn.LoginWizard.register('google', 'Google', 'google', [ Wn.Google.Wizard ]);
+Wn.LoginWizard.register('googleoauth2', 'Google', 'google', [ Wn.Google.Wizard ]);
 

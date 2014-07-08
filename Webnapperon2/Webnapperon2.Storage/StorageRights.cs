@@ -34,20 +34,20 @@ namespace Webnapperon2.Storage
 {	
 	public class StorageRights: IStorageRights
 	{
-		public StorageRights()
-		{
-		}
+		UserService userService;
 
-		public UserService UserService { get; set; }
+		public StorageRights(UserService userService)
+		{
+			this.userService = userService;
+		}
 
 		void EnsureCanWrite(HttpContext context, string storage)
 		{
-			if(context.User == null)
-				throw new WebException(401, 0, "Authentication needed");
+			userService.EnsureIsAuthenticated(context);
 
-			JsonValue resource = UserService.GetResourceFromStorage(storage);
+			JsonValue resource = userService.GetResourceFromStorage(storage);
 
-			if((context.User != resource["owner_id"]) && !((bool)resource["public_write"]) && !((bool)((JsonValue)context.Data["user"])["admin"])) {
+			if((context.User != resource["owner_id"]) && !((bool)resource["public_write"])) {
 				JsonArray rights = (JsonArray)resource["rights"];
 				bool write = false;
 				for(int i = 0; i < rights.Count; i++) {
@@ -55,18 +55,17 @@ namespace Webnapperon2.Storage
 						write = (bool)rights[i]["write"];
 				}
 				if(!write)
-					throw new WebException(403, 0, "Logged user has no sufficient credentials");
+					userService.EnsureIsAdmin(context);
 			}
 		}
 
 		void EnsureCanRead(HttpContext context, string storage)
 		{
-			if(context.User == null)
-				throw new WebException(401, 0, "Authentication needed");
+			userService.EnsureIsAuthenticated(context);
 
-			JsonValue resource = UserService.GetResourceFromStorage(storage);
+			JsonValue resource = userService.GetResourceFromStorage(storage);
 
-			if((context.User != resource["owner_id"]) && !((bool)resource["public_read"]) && !((bool)((JsonValue)context.Data["user"])["admin"])) {
+			if((context.User != resource["owner_id"]) && !((bool)resource["public_read"])) {
 				JsonArray rights = (JsonArray)resource["rights"];
 				bool read = false;
 				for(int i = 0; i < rights.Count; i++) {
@@ -74,18 +73,15 @@ namespace Webnapperon2.Storage
 						read = (bool)rights[i]["read"];
 				}
 				if(!read)
-					throw new WebException(403, 0, "Logged user has no sufficient credentials");
+					userService.EnsureIsAdmin(context);
 			}
 		}
 
 		public void EnsureCanCreateStorage(HttpContext context)
 		{
-			if(context.User == null)
-				throw new WebException(401, 0, "Authentication needed");
-
+			userService.EnsureIsAuthenticated(context);
 			// only admin can directly create storages, normal user create resources
-			if(!((bool)((JsonValue)context.Data["user"])["admin"]))
-				throw new WebException(403, 0, "Logged user has no sufficient credentials");
+			userService.EnsureIsAdmin(context);
 		}
 
 		public void EnsureCanUpdateStorage(HttpContext context, string storage)
@@ -100,12 +96,9 @@ namespace Webnapperon2.Storage
 
 		public void EnsureCanDeleteStorage(HttpContext context, string storage)
 		{
-			if(context.User == null)
-				throw new WebException(401, 0, "Authentication needed");
-
+			userService.EnsureIsAuthenticated(context);
 			// only admin can directly delete storages, normal user delete resources
-			if(!((bool)((JsonValue)context.Data["user"])["admin"]))
-				throw new WebException(403, 0, "Logged user has no sufficient credentials");
+			userService.EnsureIsAdmin(context);
 		}
 
 		public void EnsureCanReadFile(HttpContext context, string storage)
@@ -132,8 +125,8 @@ namespace Webnapperon2.Storage
 		{
 			EnsureCanRead(context, storage);
 			// only allowed to write comment for them self except admins
-			if((context.User != user) && !((bool)((JsonValue)context.Data["user"])["admin"]))
-				throw new WebException(403, 0, "Logged user has no sufficient credentials");
+			if(context.User != user)
+				userService.EnsureIsAdmin(context);
 		}
 
 		public void EnsureCanUpdateComment(HttpContext context, string storage, long file, long comment)
@@ -145,8 +138,8 @@ namespace Webnapperon2.Storage
 		{
 			EnsureCanRead(context, storage);
 			// only allowed to delete comments for them self except admins
-			if((context.User != owner) && !((bool)((JsonValue)context.Data["user"])["admin"]))
-				throw new WebException(403, 0, "Logged user has no sufficient credentials");
+			if(context.User != owner)
+				userService.EnsureIsAdmin(context);
 		}
 	}
 }

@@ -1,18 +1,17 @@
 
 Ui.CanvasElement.extend('Wn.ResourceViewGraphic', {
-	text: '',
+	title: '',
 	icon: undefined,
 	image: undefined,
 	shareMode: 'group',
 	shareCount: 0,
 	userImage: undefined,
+	foreground: undefined,
+	background: undefined,
 
 	constructor: function(config) {
-	},
-
-	setTitle: function(title) {
-		this.title = title;
-		this.invalidateDraw();
+		this.setForeground('white');
+		this.setBackground('black');
 	},
 
 	//
@@ -33,18 +32,41 @@ Ui.CanvasElement.extend('Wn.ResourceViewGraphic', {
 		this.invalidateDraw();		
 	},
 
+	setForeground: function(color) {
+		this.foreground = Ui.Color.create(color);
+		this.invalidateDraw();
+	},
+	
+	setColor: function(color) {
+		this.color = Ui.Color.create(color);
+		this.invalidateDraw();
+	},
+
+	getPreviewImage: function() {
+		if(this.image !== undefined)
+			return this.image.getSrc();
+		else
+			return undefined;
+	},
+
 	setPreviewImage: function(imageUrl) {
 		if(this.image == undefined) {
 			this.image = new Ui.Image();
 			this.appendChild(this.image);
 		}
 		this.image.setSrc(imageUrl);
+
 		if(this.image.getIsReady())
 			this.invalidateDraw();
 		else
 			this.connect(this.image, 'ready', this.invalidateDraw);
 	},
-	
+
+	setTitle: function(title) {
+		this.title = title;
+		this.invalidateDraw();
+	},
+
 	setUserImage: function(imageUrl) {
 		if(this.userImage === undefined) {
 			this.userImage = new Ui.Image({ src: imageUrl });
@@ -55,6 +77,11 @@ Ui.CanvasElement.extend('Wn.ResourceViewGraphic', {
 			this.userImage.setSrc(imageUrl);
 	}
 }, {
+	setBackground: function(color) {
+		this.background = Ui.Color.create(color);
+		this.invalidateDraw();
+	},
+
 	measureCore: function(width, height) {
 		return { width: 20, height: 20+24 };
 	},
@@ -62,54 +89,27 @@ Ui.CanvasElement.extend('Wn.ResourceViewGraphic', {
 	updateCanvas: function(ctx) {		
 		var width = this.getLayoutWidth();
 		var height = this.getLayoutHeight();
-		var fontHeight = 24;
+
+		var fontSize = this.getStyleProperty('fontSize');
+		var interLine = this.getStyleProperty('interLine');
+		var titleHeight = Math.max(55, (fontSize * (1+interLine)) + 20);
 
 		// shadow
-		ctx.roundRectFilledShadow(1, 1, width-2, height-2, 3, 3, 3, 3, false, 2, new Ui.Color({ r: 0, g: 0,b: 0, a: 0.2 }));
+//		ctx.roundRectFilledShadow(1, 1, width-2, height-2, 3, 3, 3, 3, false, 2, new Ui.Color({ r: 0, g: 0,b: 0, a: 0.2 }));
 
 		// background
-		ctx.fillStyle = 'rgb(240, 240, 240)';
-		ctx.beginPath();
-		ctx.rect(3, 3, width-6, height-6);
-		ctx.closePath();
-		ctx.fill();
-
-		// header
-		ctx.fillStyle = 'rgb(60, 60, 60)';
-		ctx.beginPath();
-		ctx.rect(3, 3, width-6, 15+fontHeight+7);
-		ctx.closePath();
-		ctx.fill();
-			
-		// header text
-		ctx.save();
-		ctx.beginPath();
-		ctx.rect(3, 3, width-6, 15+fontHeight+7);
-		ctx.closePath();
-		ctx.clip();
-		ctx.fillStyle = '#f8f8f8';//'#e1e1e1';
-		ctx.textBaseline = 'alphabetic';
-		ctx.font = 'normal '+fontHeight+'px Ubuntu';
-		ctx.fillText(this.title, 10, 10+fontHeight);
-		ctx.restore();
-					
-		// end text shadow	
-		var grd2 = ctx.createLinearGradient(width-(3+40), 3, width-3, 3);
-		grd2.addColorStop(0, 'rgba(60, 60, 60, 0)');
-		grd2.addColorStop(0.9, 'rgb(60, 60, 60)');
-		grd2.addColorStop(1, 'rgb(60, 60, 60)');
-		ctx.fillStyle = grd2;
-		ctx.beginPath();
-		ctx.rect(width-(3+40), 3, 40, 15+fontHeight+7);
-		ctx.closePath();
-		ctx.fill();
+//		ctx.fillStyle = this.background.getCssRgba();
+//		ctx.beginPath();
+//		ctx.rect(3, 3, width-6, height-6);
+//		ctx.closePath();
+//		ctx.fill();
 
 		// preview image
-		if((this.image != undefined) && this.image.getIsReady()) {
+		if((this.image !== undefined) && this.image.getIsReady()) {
 			ctx.save();
 			
-			var iw = width - 6;
-			var ih = height-(3+15+fontHeight+7+3);
+			var iw = width;
+			var ih = height-titleHeight;
 			var ir = iw/ih;
 			var sr = this.image.getNaturalWidth()/this.image.getNaturalHeight();
 			var sw = this.image.getNaturalWidth();
@@ -130,36 +130,40 @@ Ui.CanvasElement.extend('Wn.ResourceViewGraphic', {
 				sy = 0;
 				//sy = (this.image.getNaturalHeight() - sh)/2;
 			}
-			//ctx.drawImage(this.image.getDrawing(), sx, sy, sw, sh, 3, 15+fontHeight+7+3, iw, ih);
-			ctx.drawImage(this.image.getDrawing(), sx, sy, sw, sh, 3+2, 15+fontHeight+7+3+2, iw-4, ih-4);
+			ctx.drawImage(this.image.getDrawing(), sx, sy, sw, sh, 0, 0, iw, ih);
 			
 			ctx.restore();
 		}
 		// the icon
-		else if(this.icon != undefined) {
+		else if(this.icon !== undefined) {
 			var path = Ui.Icon.getPath(this.icon);
 			var iconSize = 96;
 			var scale = iconSize/48;
 			ctx.save();
-			ctx.translate((width-iconSize)/2, (15+7+fontHeight+height-iconSize)/2);
+			ctx.translate((width-iconSize)/2, (height-(iconSize+titleHeight))/2);
 			ctx.scale(scale, scale);
-			ctx.fillStyle = 'rgb(60, 60, 60)';
+			ctx.fillStyle = this.foreground.getCssRgba();
 			ctx.beginPath();
 			ctx.svgPath(path);
 			ctx.closePath();
 			ctx.fill();
 			ctx.restore();
 		}
-		
-		var ox = 0;
-				
+
+		// header
+		ctx.fillStyle = this.color.getCssRgba();
+		ctx.beginPath();
+		ctx.rect(0, height-titleHeight, width, titleHeight);
+		ctx.closePath();
+		ctx.fill();
+						
 		// owner picture
-		if((this.userImage != undefined) && this.userImage.getIsReady()) {
+		if((this.userImage !== undefined) && this.userImage.getIsReady()) {
 			ctx.save();
-			ctx.translate(width - (48+8), height - (48+8));
+			ctx.translate(8, height - (46));
 			
-			var iw = 36;
-			var ih = 36;
+			var iw = 30;
+			var ih = 30;
 			var ir = iw/ih;
 			var sr = this.userImage.getNaturalWidth()/this.userImage.getNaturalHeight();
 			var sw = this.userImage.getNaturalWidth();
@@ -167,11 +171,8 @@ Ui.CanvasElement.extend('Wn.ResourceViewGraphic', {
 			var sx = 0;
 			var sy = 0;
 
-			ctx.fillStyle = 'rgb(60,60,60)';//'black';
-			ctx.fillRect(2, 2, 44, 44);
-			
 			ctx.fillStyle = 'white';
-			ctx.fillRect(4, 4, 40, 40);
+			ctx.fillRect(1, 1, 32, 32);
 
 			if(sr > ir) {
 				sy = 0;
@@ -185,60 +186,59 @@ Ui.CanvasElement.extend('Wn.ResourceViewGraphic', {
 				sh = sw / ir;
 				sy = (this.userImage.getNaturalHeight() - sh)/2;
 			}			
-			ctx.drawImage(this.userImage.getDrawing(), sx, sy, sw, sh, 6, 6, iw, ih);
+			ctx.drawImage(this.userImage.getDrawing(), sx, sy, sw, sh, 2, 2, iw, ih);
 			
 			ctx.restore();
-			ox += 48;
 		}
-					
+
+		// the title
+		if(this.title !== '') {
+			ctx.save();
+			ctx.translate(8+32+8, height - (3+titleHeight) + fontSize + 10);
+
+			var textContext = new Ui.CompactLabelContext();
+			textContext.setFontSize(fontSize);
+			textContext.setInterLine(interLine);
+			textContext.setMaxLine(2);
+			textContext.setText(this.title);
+
+			ctx.fillStyle = 'white';
+			ctx.font = textContext.getFontWeight()+' '+textContext.getFontSize()+'px '+textContext.getFontFamily();
+
+			textContext.setDrawLine(function(x, y, line) {
+				ctx.fillText(line, x, y);
+			});
+			textContext.drawText(width - (8+32+20), true);
+			ctx.restore();
+		}
+
+		var ox = 0;
+				
 		// share picto
 		if(this.shareMode == 'public') {
-			var strokeWidth = 2;
 			ctx.save();
-						
-			ctx.translate(width - (48+8+ox), height - (48+8));
-			
-			var scale = Math.min(48, 48)/48;
-			ctx.scale(scale, scale);
-			ctx.translate(strokeWidth, strokeWidth);
-			var scale2 = (48-(strokeWidth*2))/48;
-			ctx.scale(scale2, scale2);
-			ctx.svgPath(Ui.Icon.getPath('earth'));
-			ctx.strokeStyle = 'rgb(60,60,60)';//'black';
-			ctx.lineWidth = strokeWidth*2;
-			ctx.stroke();
-			ctx.fillStyle = 'white';
-			ctx.fill();
+			ctx.fillStyle = 'rgba(40, 40, 40, 0.5)';
+			ctx.fillRect(26, 0, 30, 40);
+
+			ctx.translate(26+4, 1+14);
+			Ui.Icon.drawIcon(ctx, 'earth', 22, 'white');
 			ctx.restore();
 		}
 		else {
-			if(this.shareCount > 0) {			
-				var strokeWidth = 2;
+			if(this.shareCount > 0) {
 				ctx.save();
-				ctx.translate(width - (48+8+ox), height - (48+8));
-				var scale = Math.min(48, 48)/48;
-				ctx.scale(scale, scale);
-				ctx.translate(strokeWidth, strokeWidth);
-				var scale2 = (48-(strokeWidth*2))/48;
-				ctx.scale(scale2, scale2);
-				ctx.svgPath(Ui.Icon.getPath('group'));
-				ctx.strokeStyle = 'rgb(60,60,60)';//'black';
-				ctx.lineWidth = strokeWidth*2;
-				ctx.stroke();
-				ctx.fillStyle = 'white';
-				ctx.fill();
-				ctx.restore();
-				
-				// header text
-				ctx.save();
-				ctx.translate(width - 8 - 48/2 - ox, height - 8 - 16);
-				ctx.fillStyle = 'rgb(60,60,60)';//'black';
-				ctx.textBaseline = 'middle';
-				ctx.textAlign = 'center';
-				ctx.font = 'normal 700 12px Ubuntu';
-				ctx.fillText(this.shareCount, 0, 0);
+				ctx.fillStyle = 'rgba(40, 40, 40, 0.5)';
+				ctx.fillRect(26, 0, 30, 40);
+				ctx.translate(26+4, 1+14);
+				Ui.Icon.drawIconAndBadge(ctx, 'group', 22, 'white', this.shareCount, 22/2.5, 'white', 'black');
 				ctx.restore();
 			}
-		}		
+		}
+	}
+}, {
+	style: {
+		fontSize: 16,
+		interLine: 1.2,
+		fontWeight: 'normal'
 	}
 });

@@ -47,8 +47,7 @@ namespace Webnapperon2.Resource
 		void EnsureCanReadResource(HttpContext context, string resourceId)
 		{
 			// need a logged user
-			if(context.User == null)
-				throw new WebException(401, 0, "Authentication needed");
+			userService.EnsureIsAuthenticated(context);
 
 			JsonValue rights = userService.GetUserResourceRights(context.User, resourceId);
 			// read rights
@@ -60,8 +59,7 @@ namespace Webnapperon2.Resource
 		void EnsureCanUpdateResource(HttpContext context, string resourceId)
 		{
 			// need a logged user
-			if(context.User == null)
-				throw new WebException(401, 0, "Authentication needed");
+			userService.EnsureIsAuthenticated(context);
 
 			JsonValue rights = userService.GetUserResourceRights(context.User, resourceId);
 			// write rights
@@ -73,9 +71,7 @@ namespace Webnapperon2.Resource
 		void EnsureCanAdminResource(HttpContext context, string resourceId)
 		{
 			// need a logged user
-			if(context.User == null)
-				throw new WebException(401, 0, "Authentication needed");
-
+			userService.EnsureIsAuthenticated(context);
 			JsonValue rights = userService.GetUserResourceRights(context.User, resourceId);
 			// admin rights
 			if((bool)rights["admin"])
@@ -86,8 +82,7 @@ namespace Webnapperon2.Resource
 		void EnsureCanDeleteResource(HttpContext context, string resourceId)
 		{
 			// need a logged user
-			if(context.User == null)
-				throw new WebException(401, 0, "Authentication needed");
+			userService.EnsureIsAuthenticated(context);
 
 			JsonValue rights = userService.GetUserResourceRights(context.User, resourceId);
 			// delete rights
@@ -99,8 +94,7 @@ namespace Webnapperon2.Resource
 		void EnsureCanChangeResourceRights(HttpContext context, string resourceId, JsonValue userRights)
 		{
 			// need a logged user
-			if(context.User == null)
-				throw new WebException(401, 0, "Authentication needed");
+			userService.EnsureIsAuthenticated(context);
 
 			JsonValue rights = userService.GetUserResourceRights(context.User, resourceId);
 			// admin can do what they want

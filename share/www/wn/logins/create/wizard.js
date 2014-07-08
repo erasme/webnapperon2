@@ -62,41 +62,32 @@ Wn.WizardItem.extend('Wn.Create.Wizard', {
 	errorTimeout: undefined,
 
 	constructor: function(config) {
+	
+		var sflow = new Ui.SFlow({ spacing: 10, itemAlign: 'stretch', stretchMaxRatio: 5 });
+		this.setContent(sflow);
 
-		var vbox = new Ui.VBox({ spacing: 10 });
-		this.setContent(vbox);
-
-		vbox.append(new Ui.Label({ text: 'Nom:', horizontalAlign: 'left' }));
-
-		this.lastnameField = new Ui.TextField({ marginLeft: 20 });
-		this.connect(this.lastnameField, 'change', this.onChange);
-		vbox.append(this.lastnameField);
-
-		vbox.append(new Ui.Label({ text: 'Prénom:', horizontalAlign: 'left' }));
-
-		this.firstnameField = new Ui.TextField({ marginLeft: 20 });
+		this.firstnameField = new Wn.TextField({ title: 'Prénom', width: 200 });
 		this.connect(this.firstnameField, 'change', this.onChange);
-		vbox.append(this.firstnameField);
+		sflow.append(this.firstnameField);
 
-		vbox.append(new Ui.Label({ text: 'Identifiant:', horizontalAlign: 'left' }));
+		this.lastnameField = new Wn.TextField({ title: 'Nom', width: 200 });
+		this.connect(this.lastnameField, 'change', this.onChange);
+		sflow.append(this.lastnameField);
 
-		this.loginField = new Ui.TextField({ marginLeft: 20 });
+		this.loginField = new Wn.TextField({ title: 'Identifiant', width: 400 });
 		this.connect(this.loginField, 'change', this.onChange);
-		vbox.append(this.loginField);
+		sflow.append(this.loginField);
 
-		var hbox = new Ui.HBox({ horizontalAlign: 'left' });
-		vbox.append(hbox);
-
-		hbox.append(new Ui.Label({ text: 'Mot de passe: ' }));
-		hbox.append(new Ui.Label({ text: ' 8 caractères minium avec chiffre et lettre', opacity: 0.4 }));
-
-		this.passwordField = new Ui.TextField({ marginLeft: 20, passwordMode: true });
+		this.passwordField = new Wn.TextField({ passwordMode: true, width: 400,
+			title: 'Mot de passe',
+			desc: '8 caractères minium avec chiffre et lettre'
+		});
 		this.connect(this.passwordField, 'change', this.onChange);
-		vbox.append(this.passwordField);
+		sflow.append(this.passwordField);
 
 		this.errorMessage = new Ui.Label({ text: 'Echec de la création. Vérifier vos données', color: 'red' });
 		this.errorMessage.hide();
-		vbox.append(this.errorMessage);
+		sflow.append(this.errorMessage);
 
 		var data = this.getData();
 		if(data.login != undefined)

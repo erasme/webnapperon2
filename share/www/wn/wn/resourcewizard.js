@@ -3,7 +3,7 @@ Wn.WizardItem.extend('Wn.ResourceWizardSelector', {
 	selectType: undefined,
 
 	constructor: function(config) {
-		var flow = new Ui.SFlow({ uniform: true, spacing: 10, itemAlign: 'stretch' });
+		var flow = new Ui.SFlow({ uniform: true, spacing: 10, itemAlign: 'stretch', stretchMaxRatio: 2 });
 		this.setContent(flow);
 
 		var types = Wn.ResourceWizard.getWizardTypes();
@@ -42,18 +42,18 @@ Ui.Dialog.extend('Wn.ResourceWizard', {
 		delete(config.user);
 
 		this.setFullScrolling(true);
-		this.setPreferedWidth(450);
-		this.setPreferedHeight(400);
+		this.setPreferredWidth(450);
+		this.setPreferredHeight(400);
 
 		this.data = {};
 
 		this.setTitle('Nouvelle ressource');
-		this.setCancelButton(new Ui.Button({ text: 'Annuler' }));
+		this.setCancelButton(new Ui.DialogCloseButton({ text: 'Annuler' }));
 
 		this.previousButton = new Ui.Button({ text: 'Précédent' });
 		this.previousButton.hide();
 		this.connect(this.previousButton, 'press', this.onPreviousPress);
-		this.nextButton = new Ui.Button({ text: 'Suivant' });
+		this.nextButton = new Ui.DefaultButton({ text: 'Suivant' });
 		this.connect(this.nextButton, 'press', this.onNextPress);
 
 		this.setActionButtons([ this.previousButton, this.nextButton ]);

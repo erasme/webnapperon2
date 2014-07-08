@@ -6,5 +6,5 @@ Wn.WizardItem.extend('Wn.Facebook.Wizard', {
 	}
 });
 
-Wn.LoginWizard.register('facebook', 'Facebook', 'facebook', [ Wn.Facebook.Wizard ]);
+Wn.LoginWizard.register('facebookoauth2', 'Facebook', 'facebook', [ Wn.Facebook.Wizard ]);
 

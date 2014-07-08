@@ -6,7 +6,8 @@ Wn.ResourceCreator.extend('News.Creator', {
 			type: 'news',
 			name: this.getData().name,
 			url: this.getData().url,
-			fullcontent: this.getData().fullcontent
+			fullcontent: this.getData().fullcontent,
+			originalarticle: this.getData().originalarticle
 		});
 		this.done();
 	}

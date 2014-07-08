@@ -28,17 +28,22 @@ using System;
 using Erasme.Http;
 using Erasme.Json;
 using Erasme.Cloud.Manage;
+using Webnapperon2.User;
 
 namespace Webnapperon2.Manage
 {
 	public class ManageRights: IManageRights
 	{
+		UserService userService;
+
+		public ManageRights(UserService userService)
+		{
+			this.userService = userService;
+		}
+
 		void EnsureIsAdmin(HttpContext context)
 		{
-			if(context.User == null)
-				throw new WebException(401, 0, "Authentication needed");
-			if(!((bool)((JsonValue)context.Data["user"])["admin"]))
-				throw new WebException(403, 0, "Logged user has no sufficient credentials");
+			userService.EnsureIsAdmin(context);
 		}
 
 		public void EnsureCanReadClients(HttpContext context)
@@ -50,6 +55,17 @@ namespace Webnapperon2.Manage
 		{
 			EnsureIsAdmin(context);
 		}
+
+		public void EnsureCanReadTasks(HttpContext context)
+		{
+			EnsureIsAdmin(context);
+		}
+
+		public void EnsureCanDeleteTasks(HttpContext context)
+		{
+			EnsureIsAdmin(context);
+		}
+
 	}
 }
 

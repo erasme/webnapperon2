@@ -1,13 +1,7 @@
 
-Ui.CanvasElement.extend('TextEditor.PageBackgroundGraphic', {}, {
-	updateCanvas: function(ctx) {
-		var width = this.getLayoutWidth();
-		var height = this.getLayoutHeight();
-		// shadow
-		ctx.roundRectFilledShadow(5, 5, width-10, height-10, 2, 2, 2, 2, false, 2, new Ui.Color({ r:0, g: 0, b: 0, a: 0.5}));
-		// white bg
-		ctx.fillStyle = '#ffffff';
-		ctx.fillRect(7, 7, width-14, height-14);
+Ui.Rectangle.extend('TextEditor.PageBackgroundGraphic', {
+	constructor: function() {
+		this.setFill('#ffffff');
 	}
 });
 
@@ -38,7 +32,7 @@ Ui.App.extend('TextEditor.App', {
 //		this.italicButton = new Ui.Button({ text: 'I' });
 //		toolbar.append(this.italicButton);
 
-		var scroll = new Ui.ScrollingArea({ showScrollbar: false, scrollHorizontal: false, overScroll: true });
+		var scroll = new Ui.ScrollingArea({ scrollHorizontal: false });
 		vbox.append(scroll, true);
 
 		var lbox = new Ui.LBox();
@@ -136,7 +130,7 @@ var app = new TextEditor.App({
 webApp: false,
 style: {
 	"Ui.Element": {
-		fontFamily: "Ubuntu,Sans-Serif",
+		fontFamily: "Avenir,Sans-Serif",
 		fontWeight: 100,
 		fontSize: 16
 	},

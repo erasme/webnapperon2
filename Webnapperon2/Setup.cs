@@ -112,24 +112,6 @@ namespace Webnapperon2
 		
 		[XmlAttribute]
 		public string FacebookAuthRedirectUrl = "http://localhost/facebookoauth2";
-		
-		/// <summary>
-		/// The width of the webshot image.
-		/// </summary>
-		[XmlAttribute]
-		public int WebshotWidth = 190;
-		
-		/// <summary>
-		/// The height of the webshot image.
-		/// </summary>
-		[XmlAttribute]
-		public int WebshotHeight = 190;
-		
-		/// <summary>
-		/// The webshot cache timeout in second.
-		/// </summary>
-		[XmlAttribute]
-		public long WebshotCache = 60;
 
 		/// <summary>
 		/// The SMTP server to use for send emails

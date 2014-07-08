@@ -6,6 +6,7 @@ Ui.Dialog.extend('Wn.ResourcePropertiesDialog', {
 	deleteButton: undefined,
 	modifyButton: undefined,
 	nameField: undefined,
+	bookmarkField: undefined,
 
 	constructor: function(config) {
 		this.user = config.user;
@@ -13,22 +14,26 @@ Ui.Dialog.extend('Wn.ResourcePropertiesDialog', {
 		this.resource = config.resource;
 		delete(config.resource);
 
-		this.setPreferedWidth(500);
-		this.setPreferedHeight(500);
+		this.setPreferredWidth(500);
+		this.setPreferredHeight(500);
 		this.setFullScrolling(true);
 
 		this.setTitle('Propriétés de la ressource');
-		this.setCancelButton(new Ui.Button({ text: 'Fermer' }));
+		this.setCancelButton(new Ui.DialogCloseButton());
 
 		var vbox = new Ui.VBox();
 		this.setContent(vbox);
-		
-		var hbox = new Ui.HBox({ spacing: 10 });
-		vbox.append(hbox);
-		
-		hbox.append(new Ui.Text({ text: 'Nom', width: 100, textAlign: 'right', verticalAlign: 'center' }));
-		this.nameField = new Ui.TextField({ value: this.resource.getName(), verticalAlign: 'center' });
-		hbox.append(this.nameField, true);
+
+		this.nameField = new Wn.TextField({ title: 'Nom', width: 200, value: this.resource.getName() });
+		vbox.append(this.nameField);
+
+		if(this.resource.getOwnerId() !== this.user.getId()) {
+			this.bookmarkField = new Wn.CheckField({
+				title: 'Favoris', width: 200, value: this.resource.getBookmark(),
+				text: "afficher sur ma page d'accueil"
+			});
+			vbox.append(this.bookmarkField);
+		}
 
 		var sharesSection = new Wn.ResourceSharesSection({ user: this.user, resource: this.resource });
 		vbox.append(sharesSection);
@@ -41,7 +46,7 @@ Ui.Dialog.extend('Wn.ResourcePropertiesDialog', {
 			this.deleteButton = new Wn.AlertButton({ text: 'Supprimer' });
 			this.connect(this.deleteButton, 'press', this.onDeletePress);
 
-			this.saveButton = new Ui.Button({ text: 'Enregistrer' });
+			this.saveButton = new Ui.DefaultButton({ text: 'Enregistrer' });
 			this.connect(this.saveButton, 'press', this.onSavePress);
 
 			this.setActionButtons([ this.deleteButton, this.saveButton ]);
@@ -52,7 +57,15 @@ Ui.Dialog.extend('Wn.ResourcePropertiesDialog', {
 	},
 
 	onSavePress: function() {
-		this.resource.changeData({ name: this.nameField.getValue() });
+		if(this.resource.getName() !== this.nameField.getValue())
+			this.resource.changeData({ name: this.nameField.getValue() });
+
+		if((this.bookmarkField !== undefined) && (this.resource.getBookmark() !== this.bookmarkField.getValue())) {
+			if(this.bookmarkField.getValue())
+				this.resource.bookmark();
+			else
+				this.resource.unbookmark();
+		}
 		this.close();
 	},
 

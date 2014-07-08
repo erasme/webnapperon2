@@ -4,8 +4,11 @@ Ui.CanvasElement.extend('Wn.NewRibbon', {
 	updateCanvas: function(ctx) {
 		var w = this.getLayoutWidth();
 		var h = this.getLayoutHeight();		
-		
-		ctx.fillStyle = '#c240a3';
+
+		ctx.rotate(-Math.PI/2);
+		ctx.translate(-w, 0);
+
+		ctx.fillStyle = Ui.Color.create(this.getStyleProperty('background')).getCssRgba();
 		ctx.beginPath();
 		ctx.moveTo(0, 0);
 		ctx.lineTo(w/2, 0);
@@ -22,6 +25,15 @@ Ui.CanvasElement.extend('Wn.NewRibbon', {
 		ctx.textAlign = 'center';
 		ctx.textBaseline = 'middle';
 		ctx.font = 'normal '+(Math.min(w,h)*0.3)+'px Ubuntu';
-		ctx.fillText('Nouv.', 0, 0);
+		ctx.fillText('nouv.', 0, 0);
+	},
+
+	onStyleChange: function() {
+		this.invalidateDraw();
+	}
+
+}, {
+	style: {
+		background: '#E20045'
 	}
 });

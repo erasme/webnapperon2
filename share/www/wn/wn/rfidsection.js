@@ -7,8 +7,8 @@ Ui.Dialog.extend('Wn.RfidEditDialog', {
 		delete(config.rfidTags);
 	
 		this.setTitle('Tags RFID');
-		this.setPreferedWidth(300);
-		this.setCancelButton(new Ui.Button({ text: 'Fermer' }));
+		this.setPreferredWidth(300);
+		this.setCancelButton(new Ui.DialogCloseButton());
 		
 		var vbox = new Ui.VBox({ spacing: 10, margin: 10, verticalAlign: 'center' });
 		this.setContent(vbox);
@@ -45,8 +45,8 @@ Ui.Dialog.extend('Wn.RfidNewDialog', {
 		this.addEvents('done');
 	
 		this.setTitle('Nouveau Tag RFID');
-		this.setPreferedWidth(300);
-		this.setPreferedHeight(200);
+		this.setPreferredWidth(300);
+		this.setPreferredHeight(200);
 
 		var hbox = new Ui.HBox({ spacing: 10, verticalAlign: 'center' });
 		this.setContent(hbox);
@@ -58,9 +58,9 @@ Ui.Dialog.extend('Wn.RfidNewDialog', {
 
 		hbox.append(new Ui.Icon({ icon: 'rfidreader', verticalAlign: 'center', width: 30, height: 30 }));
 
-		this.setCancelButton(new Ui.Button({ text: 'Annuler' }));
+		this.setCancelButton(new Ui.DialogCloseButton({ text: 'Annuler' }));
 		
-		var saveButton = new Ui.Button({ text: 'Enregistrer' });
+		var saveButton = new Ui.DefaultButton({ text: 'Enregistrer' });
 		this.connect(saveButton, 'press', this.onSavePress);
 		this.setActionButtons([ saveButton ]);
 		
@@ -90,7 +90,7 @@ Ui.Dialog.extend('Wn.RfidNewDialog', {
 	}
 });
 
-Ui.Selectionable.extend('Wn.RfidTag', {
+Wn.SelectionButton.extend('Wn.RfidTag', {
 	user: undefined,
 	rfid: undefined,
 
@@ -99,17 +99,12 @@ Ui.Selectionable.extend('Wn.RfidTag', {
 
 		this.user = config.user;
 		delete(config.user);
-			
+
 		this.rfid = config.rfid;
 		delete(config.rfid);
-		
-		var vbox = new Ui.VBox();
-		this.setContent(vbox);
 	
-		vbox.append(new Ui.Icon({ icon: 'rfidtag', width: 48, height: 48, fill: '#444444', horizontalAlign: 'center' }));
-	
-		var label = new Ui.CompactLabel({ width: 80, maxLine: 2, textAlign: 'center', text: this.rfid });
-		vbox.append(label);
+		this.setIcon('rfidtag');
+		this.setText(this.rfid);
 	},
 	
 	getRfid: function() {
@@ -150,14 +145,12 @@ Ui.Selectionable.extend('Wn.RfidTag', {
 	},
 	
 	onTagEdit: function(selection) {
-		console.log('onTagEdit '+selection.getElements().length);
 		var elements = selection.getElements();
 		var dialog = new Wn.RfidEditDialog({ rfidTags: elements });
 		dialog.open();
 	},
 	
 	onTagDelete: function(selection) {
-		console.log('onTagDelete '+selection.getElements().length);
 		var elements = selection.getElements();
 		for(var i = 0; i < elements.length; i++)
 			elements[i]["delete"]();
@@ -181,12 +174,10 @@ Wn.OptionSection.extend('Wn.RfidSection', {
 		
 		this.flow = new Ui.Flow({ uniform: true });
 		this.setContent(this.flow);
-				
-		var pressable = new Ui.Pressable();
-		this.connect(pressable, 'press', this.onTagNewPress);
-		this.flow.append(pressable);
-		
-		pressable.setContent(new Ui.Icon({ icon: 'plus', width: 48, height: 48, fill: '#444444', verticalAlign: 'center', horizontalAlign: 'center' }));
+
+		var button = new Wn.ListAddButton({ verticalAlign: 'center', horizontalAlign: 'center' });
+		this.connect(button, 'press', this.onTagNewPress);
+		this.flow.append(button);
 	},
 	
 	setTags: function(tags) {

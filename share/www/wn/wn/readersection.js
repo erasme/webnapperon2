@@ -14,37 +14,31 @@ Ui.Dialog.extend('Wn.ReaderEditDialog', {
 		this.reader = this.readerUi.getReader();
 	
 		this.setTitle('Lecteur RFID');
-		this.setPreferedWidth(400);
-		this.setPreferedHeight(300);
-		this.setCancelButton(new Ui.Button({ text: 'Fermer' }));
+		this.setPreferredWidth(400);
+		this.setPreferredHeight(300);
+		this.setCancelButton(new Ui.DialogCloseButton());
 		
 		var vbox = new Ui.VBox({ spacing: 10 });
 		this.setContent(vbox);
 
-		var hbox = new Ui.HBox({ spacing: 10 });
-		vbox.append(hbox);
-		hbox.append(new Ui.Text({ text: 'Nom', verticalAlign: 'center', width: 100 }));
-		this.nameField = new Ui.TextField({ value: this.reader.name, verticalAlign: 'center' });
-		hbox.append(this.nameField, true);
-						
-		var hbox = new Ui.HBox({ spacing: 10 });
-		vbox.append(hbox);		
-		hbox.append(new Ui.Text({ text: 'Identifiant', verticalAlign: 'center', width: 100 }));
-		hbox.append(new Ui.Text({ text: this.reader.id, verticalAlign: 'center' }), true);
+		this.nameField = new Wn.TextField({ title: 'Nom', value: this.reader.name });
+		vbox.append(this.nameField);
 
-		var hbox = new Ui.HBox({ spacing: 10 });
-		vbox.append(hbox);		
-		hbox.append(new Ui.Text({ text: 'URL', verticalAlign: 'center', width: 100 }));
-		
+		var idField = new Wn.TextField({ title: 'Identifiant', value: this.reader.id });
+		idField.disable();
+		vbox.append(idField);
+
 		var readerUrl = (new Core.Uri({ uri: '/cloud/rfid/'+this.reader.id+'/enter' })).toString();
-		hbox.append(new Ui.Text({ text: readerUrl, verticalAlign: 'center', selectable: true }), true);
-		
-		var saveButton = new Ui.Button({ text: 'Enregistrer' });
-		this.connect(saveButton, 'press', this.onSavePress);
+		var readerField = new Wn.TextField({ title: 'URL', value: readerUrl });
+		readerField.disable();
+		vbox.append(readerField);
 
 		var deleteButton = new Ui.Button({ text: 'Supprimer' });
 		this.connect(deleteButton, 'press', this.onDeletePress);
-		
+
+		var saveButton = new Ui.DefaultButton({ text: 'Enregistrer' });
+		this.connect(saveButton, 'press', this.onSavePress);
+
 		this.setActionButtons([ deleteButton, saveButton ]);		
 	},
 	
@@ -82,13 +76,12 @@ Ui.Dialog.extend('Wn.ReaderNewDialog', {
 		this.addEvents('done');
 	
 		this.setTitle('Nouveau Lecteur RFID');
-		this.setPreferedWidth(400);
-		this.setPreferedHeight(300);
+		this.setPreferredWidth(400);
+		this.setPreferredHeight(300);
 		
 		this.setContent(new Ui.Text({ textAlign: 'center', text: 'Création en cours...' }));
-		
-		var closeButton = new Ui.Button({ text: 'Fermer' });
-		this.setCancelButton(closeButton);
+
+		this.setCancelButton(new Ui.DialogCloseButton());
 						
 		this.request = new Core.HttpRequest({ method: 'POST',
 			url: '/cloud/user/'+this.user.getId()+'/readers',
@@ -109,30 +102,24 @@ Ui.Dialog.extend('Wn.ReaderNewDialog', {
 		var vbox = new Ui.VBox({ spacing: 10 });
 		this.setContent(vbox);
 
-		var hbox = new Ui.HBox({ spacing: 10 });
-		vbox.append(hbox);		
-		hbox.append(new Ui.Text({ text: 'Nom', verticalAlign: 'center', width: 100 }));
-		this.nameField = new Ui.TextField({ value: reader.name, verticalAlign: 'center' });
-		hbox.append(this.nameField, true);
-						
-		var hbox = new Ui.HBox({ spacing: 10 });
-		vbox.append(hbox);		
-		hbox.append(new Ui.Text({ text: 'Identifiant', verticalAlign: 'center', width: 100 }));
-		hbox.append(new Ui.Text({ text: reader.id, verticalAlign: 'center' }), true);
+		this.nameField = new Wn.TextField({ title: 'Nom', value: reader.name });
+		vbox.append(this.nameField);
 
-		var hbox = new Ui.HBox({ spacing: 10 });
-		vbox.append(hbox);		
-		hbox.append(new Ui.Text({ text: 'URL', verticalAlign: 'center', width: 100 }));
-		
+		var idField = new Wn.TextField({ title: 'Identifiant', value: reader.id });
+		idField.disable();
+		vbox.append(idField);
+
 		var readerUrl = (new Core.Uri({ uri: '/cloud/rfid/'+reader.id+'/enter' })).toString();
-		hbox.append(new Ui.Text({ text: readerUrl, verticalAlign: 'center', selectable: true }), true);
-		
-		var saveButton = new Ui.Button({ text: 'Enregistrer' });
-		this.connect(saveButton, 'press', this.onSavePress);
+		var urlField = new Wn.TextField({ title: 'URL', value: readerUrl });
+		urlField.disable();
+		vbox.append(urlField);
 
 		var deleteButton = new Ui.Button({ text: 'Supprimer' });
 		this.connect(deleteButton, 'press', this.onDeletePress);
-		
+
+		var saveButton = new Ui.DefaultButton({ text: 'Enregistrer' });
+		this.connect(saveButton, 'press', this.onSavePress);
+				
 		this.setActionButtons([ deleteButton, saveButton ]);
 	},
 	
@@ -165,7 +152,7 @@ Ui.Dialog.extend('Wn.ReaderNewDialog', {
 	}
 });
 
-Ui.Selectionable.extend('Wn.RfidReaderUi', {
+Wn.SelectionButton.extend('Wn.RfidReaderUi', {
 	user: undefined,
 	reader: undefined,
 
@@ -177,14 +164,9 @@ Ui.Selectionable.extend('Wn.RfidReaderUi', {
 
 		this.reader = config.reader;
 		delete(config.reader);
-				
-		var vbox = new Ui.VBox();
-		this.setContent(vbox);
-	
-		vbox.append(new Ui.Icon({ icon: 'rfidreader', width: 48, height: 48, fill: '#444444', horizontalAlign: 'center' }));
-	
-		var label = new Ui.CompactLabel({ width: 80, maxLine: 2, textAlign: 'center', text: this.reader.name });
-		vbox.append(label);
+			
+		this.setIcon('rfidreader');
+		this.setText(this.reader.name);
 	},
 	
 	getUser: function() {
@@ -259,11 +241,9 @@ Wn.OptionSection.extend('Wn.ReaderSection', {
 		this.flow = new Ui.Flow({ uniform: true });
 		this.setContent(this.flow);
 				
-		var pressable = new Ui.Pressable();
+		var pressable = new Wn.ListAddButton({ verticalAlign: 'center', horizontalAlign: 'center' });
 		this.connect(pressable, 'press', this.onReaderNewPress);
 		this.flow.append(pressable);
-		
-		pressable.setContent(new Ui.Icon({ icon: 'plus', width: 48, height: 48, fill: '#444444', verticalAlign: 'center', horizontalAlign: 'center' }));
 	},
 	
 	setReaders: function(readers) {

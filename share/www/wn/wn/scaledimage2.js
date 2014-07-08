@@ -2,8 +2,13 @@
 Ui.Fixed.extend('Wn.ScaledImage2', {
 	image: undefined,
 	src: undefined,
+	mode: 'fit',
 
 	constructor: function(config) {
+		if('mode' in config) {
+			this.mode = config.mode;
+			delete(config.mode);
+		}
 		this.setClipToBounds(true);
 		if('src' in config) {
 			this.src = config.src;
@@ -39,6 +44,44 @@ Ui.Fixed.extend('Wn.ScaledImage2', {
 	},
 
 	updateSize: function() {
+		if(this.mode === 'fit')
+			this.updateSizeFit();
+		else
+			this.updateSizeCrop();
+	},
+
+	updateSizeCrop: function() {
+		if(!this.image.getIsReady())
+			return;
+
+		var nWidth = this.image.getNaturalWidth();
+		var nHeight = this.image.getNaturalHeight();
+
+		var lWidth = this.getLayoutWidth();
+		var lHeight = this.getLayoutHeight();
+
+		var ratio = lWidth / lHeight;
+		var nRatio = nWidth / nHeight;
+
+		if(nRatio < ratio) {
+			var iWidth = lWidth;
+			var iHeight = iWidth / nRatio;
+
+			this.setPosition(this.image, 0, -(iHeight - lHeight) / 2);
+			this.image.setWidth(iWidth);
+			this.image.setHeight(iHeight);
+		}
+		else {
+			var iHeight = lHeight;
+			var iWidth = iHeight * nRatio;
+
+			this.setPosition(this.image, -(iWidth - lWidth) / 2, 0);
+			this.image.setWidth(iWidth);
+			this.image.setHeight(iHeight);
+		}
+	},
+	
+	updateSizeFit: function() {
 		var nWidth = this.image.getNaturalWidth();
 		var nHeight = this.image.getNaturalHeight();
 

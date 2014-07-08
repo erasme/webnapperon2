@@ -7,22 +7,18 @@ Wn.WizardItem.extend('Calendar.Wizard', {
 		var vbox = new Ui.VBox({ spacing: 10 });
 		this.setContent(vbox);
 
-		vbox.append(new Ui.Label({ text: 'Nom de la ressource:', horizontalAlign: 'left' }));
-
-		this.nameField = new Ui.TextField({ marginLeft: 20 });
+		this.nameField = new Wn.TextField({ title: 'Nom de la ressource' });
 		this.connect(this.nameField, 'change', this.onChange);
 		vbox.append(this.nameField);
 
-		vbox.append(new Ui.Label({ text: 'URL du flux ICAL du calendrier:', horizontalAlign: 'left' }));
-
-		this.urlField = new Ui.TextField({ marginLeft: 20 });
+		this.urlField = new Wn.TextField({ title: 'URL du flux ICAL du calendrier' });
 		this.connect(this.urlField, 'change', this.onChange);
 		vbox.append(this.urlField);
 
 		var data = this.getData();
-		if(data.name != undefined)
+		if(data.name !== undefined)
 			this.nameField.setValue(data.name);
-		if(data.url != undefined)
+		if(data.url !== undefined)
 			this.urlField.setValue(data.url);
 		this.onChange();
 	},

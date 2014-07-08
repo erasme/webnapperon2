@@ -1,42 +1,18 @@
 
-Ui.DropBox.extend('Wn.UploadFaceButton', 
-{
+Ui.UploadButton.extend('Wn.UploadFaceButton', {
 	user: undefined,
-	graphic: undefined,
-	uploadable: undefined,
 	image: undefined,
 
 	constructor: function(config) {
 		this.user = config.user;
 		delete(config.user);
-			
-		this.addMimetype('files');
-	
-		this.uploadable = new Ui.Uploadable();
-		this.setContent(this.uploadable);
-	
-		var lbox = new Ui.LBox();
-		this.uploadable.setContent(lbox);
-	
-		this.graphic = new Ui.ButtonGraphic();
-		lbox.append(this.graphic);
-		
-		this.image = new Ui.Image({ width: 64, height: 64, margin: 10 });
-		lbox.append(this.image);
 
-		this.connect(this.uploadable, 'down', function() { this.graphic.setIsDown(true); });
-		this.connect(this.uploadable, 'up', function() { this.graphic.setIsDown(false); });
-		this.connect(this.uploadable, 'focus', function() { this.graphic.setColor(this.getStyleProperty('focusColor')); });
-		this.connect(this.uploadable, 'blur', function() { this.graphic.setColor(this.getStyleProperty('color')); });
-		this.connect(this, 'dropfile', this.onUploadFile);
-		this.connect(this.uploadable, 'file', this.onUploadFile);
+		this.image = new Ui.Image({ width: 64, height: 64 });
+		this.setIcon(this.image);
 	},
-	
-	onUploadFile: function(element, file) {
-		var uploader = new Core.FilePostUploader({ file: file, service: '/cloud/user/'+this.user.getId()+'/face' });
-		this.connect(uploader, 'progress', this.onUploadProgress);
-		this.connect(uploader, 'complete', this.onUploadComplete);
-		uploader.send();
+
+	onUserChange: function() {
+		this.image.setSrc(this.user.getFaceUrl());
 	},
 
 	onUploadProgress: function(uploader) {
@@ -44,13 +20,17 @@ Ui.DropBox.extend('Wn.UploadFaceButton',
 
 	onUploadComplete: function(uploader) {
 		this.image.setSrc('/cloud/user/'+this.user.getId()+'/face');
-	},
-	
-	onUserChange: function() {
-		this.image.setSrc(this.user.getFaceUrl());
 	}
-}, 
-{
+
+}, {
+	onFile: function(button, file) {
+		Wn.UploadFaceButton.base.onFile.apply(this, arguments);
+		var uploader = new Core.FilePostUploader({ file: file, service: '/cloud/user/'+this.user.getId()+'/face' });
+		this.connect(uploader, 'progress', this.onUploadProgress);
+		this.connect(uploader, 'complete', this.onUploadComplete);
+		uploader.send();
+	},
+
 	onLoad: function() {
 		Wn.UploadFaceButton.base.onLoad.call(this);
 		this.connect(this.user, 'change', this.onUserChange);
@@ -62,7 +42,7 @@ Ui.DropBox.extend('Wn.UploadFaceButton',
 		this.disconnect(this.user, 'change', this.onUserChange);
 	}
 });
-
+	
 Ui.Dialog.extend('Wn.UserProfil', {
 	user: undefined,
 	firstnameField: undefined,
@@ -80,8 +60,9 @@ Ui.Dialog.extend('Wn.UserProfil', {
 	defaultFriendField: undefined,
 	adminField: undefined,
 	saveButton: undefined,
-	grid: undefined,
+	sflow: undefined,
 	webSection: undefined,
+	styleSection: undefined,
 	readerSection: undefined,		
 	rfidSection: undefined,
 	tags: undefined,
@@ -97,10 +78,10 @@ Ui.Dialog.extend('Wn.UserProfil', {
 			this.user = new Wn.User({ user:  { id: this.user.getId(), face_rev: 0 }, monitor: false });
 
 		this.setFullScrolling(true);
-		this.setPreferedWidth(650);
-		this.setPreferedHeight(550);
+		this.setPreferredWidth(650);
+		this.setPreferredHeight(550);
 		this.setTitle('Profil utilisateur');
-		this.setCancelButton(new Ui.Button({ text: 'Fermer' }));
+		this.setCancelButton(new Ui.DialogCloseButton());
 				
 		if(this.user.getIsReady())
 			this.onUserReady();
@@ -141,52 +122,50 @@ Ui.Dialog.extend('Wn.UserProfil', {
 		}
 		
 		if(Wn.User.hasInstance(this.user)) {
-			this.saveButton = new Ui.Button({ text: 'Enregistrer' });
+			this.saveButton = new Ui.DefaultButton({ text: 'Enregistrer' });
 			this.connect(this.saveButton, 'press', this.onSavePress);
 			actionButtons.push(this.saveButton);
 		}
 
 		this.setActionButtons(actionButtons);
 		
-		var mainVbox = new Ui.VBox();
+		var mainVbox = new Ui.VBox({ spacing: 10 });
 		
 		this.setContent(mainVbox);
-		
-		var grid = new Ui.Grid({ cols: 'auto,*,auto', rows: 'auto,auto,auto,auto,auto,auto,auto,auto,auto,auto'});
-		mainVbox.append(grid);
-		this.grid = grid;
+
+		var sflow = new Ui.SFlow({ itemAlign: 'stretch', stretchMaxRatio: 10, spacing: 10 });
+		mainVbox.append(sflow);
+		this.sflow = sflow;
 
 		var avatarButton = new Wn.UploadFaceButton({ user: this.user, marginLeft: 10 });
-		grid.attach(avatarButton, 2, 2, 1, 3);
+		sflow.append(avatarButton, 'right');
 
-		grid.attach(new Ui.Label({ text: 'Prénom', horizontalAlign: 'right', marginRight: 10 }), 0, 3);
-		this.firstnameField = new Ui.TextField();
-		grid.attach(this.firstnameField, 1, 3, 1, 1);
+		this.firstnameField = new Wn.TextField({ title: 'Prénom' , width: 100 });
+		sflow.append(this.firstnameField);
 
-		grid.attach(new Ui.Label({ text: 'Nom', horizontalAlign: 'right', marginRight: 10 }), 0, 4);
-		this.lastnameField = new Ui.TextField();
-		grid.attach(this.lastnameField, 1, 4, 1, 1);
+		this.lastnameField = new Wn.TextField({ title: 'Nom', width: 100 });
+		sflow.append(this.lastnameField);
 
-		grid.attach(new Ui.Label({ text: 'Description', horizontalAlign: 'right', marginRight: 10 }), 0, 5);
-		this.descField = new Ui.TextAreaField();
-		grid.attach(this.descField, 1, 5, 2, 1);
+		this.descField = new Wn.TextAreaField({ title: 'Description', width: 400 });
+		sflow.append(this.descField);
 
 		if(Wn.User.hasInstance(this.user)) {
-			grid.attach(new Ui.Label({ text: 'Email', horizontalAlign: 'right', marginRight: 10 }), 0, 6);
-			this.emailField = new Ui.TextField();
+			this.emailField = new Wn.TextField({ title: 'Email', width: 600 });
 			this.connect(this.emailField, 'change', function(field, value) {
 				if(value == '')
 					this.notifyBox.disable();
 				else
 					this.notifyBox.enable();
 			});
-			grid.attach(this.emailField, 1, 6, 2, 1);
+			sflow.append(this.emailField);
 
 			// email notify
-			grid.attach(new Ui.Text({ text: 'Notifications par email', textAlign: 'right', verticalAlign: 'center', marginRight: 10, width: 80 }), 0, 7);
+			var groupField = new Wn.GroupField({ title: 'Notifications par email' });
+			sflow.append(groupField);
+
 			this.notifyBox = new Ui.VBox({ uniform: true });
 			this.notifyBox.disable();
-			grid.attach(this.notifyBox, 1, 7, 2, 1);
+			groupField.setContent(this.notifyBox);
 
 			this.notifyMessageSend = new Ui.CheckBox({ text: 'on m\'a envoyé un message' });
 			this.notifyBox.append(this.notifyMessageSend);
@@ -201,17 +180,21 @@ Ui.Dialog.extend('Wn.UserProfil', {
 			this.notifyBox.append(this.notifyCommentAdd);
 
 			// default share rights
-			grid.attach(new Ui.Text({ text: 'Droit de partage', textAlign: 'right', verticalAlign: 'center', marginRight: 10, width: 80 }), 0, 8);
+			groupField = new Wn.GroupField({ title: 'Droit de partage' });
+			sflow.append(groupField);
+
 			var vbox = new Ui.VBox({ uniform: true });
 			this.defaultShareField = new Ui.CheckBox({ text: 'autoriser le repartage' });
 			vbox.append(this.defaultShareField);
 			this.defaultWriteField = new Ui.CheckBox({ text: 'autoriser la modification' });
 			vbox.append(this.defaultWriteField);
-			grid.attach(vbox, 1, 8, 2, 1);
+			groupField.setContent(vbox);
 
 			// admin flags
 			if(Ui.App.current.getUser().isAdmin()) {
-				grid.attach(new Ui.Text({ text: 'Admin flags', textAlign: 'right', verticalAlign: 'center', marginRight: 10, width: 80, color: 'red' }), 0, 9);
+				groupField = new Wn.GroupField({ title: 'Droits administrateurs' });
+				sflow.append(groupField);
+
 				var vbox = new Ui.VBox({ uniform: true });
 				this.adminField = new Ui.CheckBox({ text: 'compte administrateur' });
 				vbox.append(this.adminField);
@@ -219,11 +202,14 @@ Ui.Dialog.extend('Wn.UserProfil', {
 				this.defaultFriendField = new Ui.CheckBox({ text: 'compte d\'ami par défault' });
 				vbox.append(this.defaultFriendField);
 
-				grid.attach(vbox, 1, 9, 2, 1);
+				groupField.setContent(vbox);
 			}
 
 			this.webSection = new Wn.WebAccountSection({ user: this.user });
 			mainVbox.append(this.webSection);
+
+			this.styleSection = new Wn.StyleSection({ user: this.user });
+			mainVbox.append(this.styleSection);
 
 			var deviceSection = new Wn.DeviceSection({ user: this.user, devices: this.user.getData().devices });
 			mainVbox.append(deviceSection);
@@ -265,7 +251,8 @@ Ui.Dialog.extend('Wn.UserProfil', {
 			}
 		}
 		else {
-			grid.disable();
+			this.sflow.disable();
+			//grid.disable();
 		}
 	},
 
@@ -312,7 +299,7 @@ Ui.Dialog.extend('Wn.UserProfil', {
 		}
 		// else disable saveButton and any change
 		else {
-			this.grid.disable();
+			this.sflow.disable();
 			this.saveButton.disable();
 		}
 	},
@@ -320,10 +307,10 @@ Ui.Dialog.extend('Wn.UserProfil', {
 	testSaveEnd: function() {
 		if(this.saveRequests.length == 0) {
 			if(this.errorRequests.length > 0) {
-				this.grid.enable();
+				this.sflow.enable();
 				this.saveButton.enable();
 		
-				var dialog = new Ui.Dialog({ preferedWidth: 300, title: 'Echec de l\'enregistrement' });
+				var dialog = new Ui.Dialog({ preferredWidth: 300, title: 'Echec de l\'enregistrement' });
 				dialog.setContent(new Ui.Text({ text: 
 					'L\'enregistrement à échoué. Vérifiez que votre mot de passe '+
 					'respecte la politique de sécurité. A savoir qu\'il doit faire au '+
@@ -368,14 +355,14 @@ Ui.Dialog.extend('Wn.UserProfil', {
 		var dialog = new Ui.Dialog({
 			title: 'Suppression de compte',
 			fullScrolling: true,
-			preferedWidth: 300,
-			preferedHeight: 300
+			preferredWidth: 300,
+			preferredHeight: 300
 		});
 		dialog.setContent(new Ui.Text({ text: 
 			'Voulez vous vraiment supprimer ce compte ? ATTENTION, cet utilisateur '+
 			'et toutes ses ressources n\'existeront plus après cette action.' }));
-		dialog.setCancelButton(new Ui.Button({ text: 'Annuler' }));
-		var deleteButton = new Wn.AlertButton({ text: 'Supprimer' });
+		dialog.setCancelButton(new Ui.DialogCloseButton({ text: 'Annuler' }));
+		var deleteButton = new Ui.DefaultButton({ text: 'Supprimer' });
 		dialog.setActionButtons([deleteButton]);
 
 		this.connect(deleteButton, 'press', function() {
@@ -401,13 +388,13 @@ Ui.Dialog.extend('Wn.UserProfil', {
 		var dialog = new Ui.Dialog({
 			title: 'Connexion au compte',
 			fullScrolling: true,
-			preferedWidth: 300,
-			preferedHeight: 300
+			preferredWidth: 300,
+			preferredHeight: 300
 		});
 		dialog.setContent(new Ui.Text({ text: 
 			'Voulez vous vraiment ouvrir une session sur le compte de cet utilisateur ? ATTENTION, '+
 			'vous ne serez plus sur votre compte et vous aller agir au nom de cette personne.' }));
-		dialog.setCancelButton(new Ui.Button({ text: 'Annuler' }));
+		dialog.setCancelButton(new Ui.DialogCloseButton({ text: 'Annuler' }));
 		var switchButton = new Wn.InfoButton({ text: 'Commuter' });
 		dialog.setActionButtons([switchButton]);
 
@@ -422,8 +409,8 @@ Ui.Dialog.extend('Wn.UserProfil', {
 		var dialog = new Ui.Dialog({
 			title: 'Enlever un contact',
 			fullScrolling: true,
-			preferedWidth: 300,
-			preferedHeight: 300,
+			preferredWidth: 300,
+			preferredHeight: 300,
 			cancelButton: new Ui.Button({ text: 'Annuler' }),
 			content: new Ui.Text({ text: 'Voulez vous supprimer ce contact de votre liste de contact ?\n\nCela ne vous empêchera pas de le remettre plus tard si vous changez d\'avis.' })
 		});
@@ -441,8 +428,8 @@ Ui.Dialog.extend('Wn.UserProfil', {
 		var dialog = new Ui.Dialog({
 			title: 'Ajout de contact',
 			fullScrolling: true,
-			preferedWidth: 300,
-			preferedHeight: 300,
+			preferredWidth: 300,
+			preferredHeight: 300,
 			cancelButton: new Ui.Button({ text: 'Annuler' }),
 			content: new Ui.Text({ text: 'Voulez vous ajouter ce contact dans votre liste de contact ?' })
 		});

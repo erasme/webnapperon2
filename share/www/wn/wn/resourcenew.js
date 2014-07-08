@@ -1,7 +1,6 @@
 
-Ui.Pressable.extend('Wn.ResourceNew', {
+Ui.Button.extend('Wn.AppView', {
 	user: undefined,
-	graphic: undefined,
 
 	constructor: function(config) {
 		this.user = config.user;
@@ -9,13 +8,19 @@ Ui.Pressable.extend('Wn.ResourceNew', {
 		this.resource = config.resource;
 		delete(config.resource);
 
-		this.graphic = new Wn.AppViewGraphic({ icon: 'plus' });
-		this.append(this.graphic);
-		
-		this.connect(this, 'press', this.onResourcePress);
+		this.getIconBox().setVerticalAlign('center');
+		this.getIconBox().setHorizontalAlign('center');
+	}
+});
+
+Wn.AppView.extend('Wn.ResourceNew', {
+	
+	constructor: function(config) {
+		this.setIcon('plus');
+		this.connect(this, 'press', this.onResourceNewPress);
 	},
 
-	onResourcePress: function() {
+	onResourceNewPress: function() {
 		var dialog = new Wn.ResourceWizard({ user: this.user });
 		dialog.open();
 	}

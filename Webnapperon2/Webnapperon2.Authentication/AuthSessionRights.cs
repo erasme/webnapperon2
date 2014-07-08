@@ -28,41 +28,38 @@ using System;
 using Erasme.Http;
 using Erasme.Json;
 using Erasme.Cloud.Authentication;
+using Webnapperon2.User;
 
 namespace Webnapperon2.Authentication
 {
 	public class AuthSessionRights: IAuthSessionRights
 	{
+		UserService userService;
+
+		public AuthSessionRights(UserService userService)
+		{
+			this.userService = userService;
+		}
+
 		public void EnsureCanCreateSession(HttpContext context, string user)
 		{
-			if(context.User == null)
-				throw new WebException(401, 0, "Authentication needed");
-			if(!((bool)((JsonValue)context.Data["user"])["admin"]))
-				throw new WebException(403, 0, "Logged user has no sufficient credentials");
+			userService.EnsureIsAdmin(context);
 		}
 
 		public void EnsureCanReadSession(HttpContext context, string session, string user)
 		{
-			if(context.User == null)
-				throw new WebException(401, 0, "Authentication needed");
-			if((context.User != user) && !((bool)((JsonValue)context.Data["user"])["admin"]))
-				throw new WebException(403, 0, "Logged user has no sufficient credentials");
 		}
 
 		public void EnsureCanDeleteSession(HttpContext context, string session, string user)
 		{
-			if(context.User == null)
-				throw new WebException(401, 0, "Authentication needed");
-			if((context.User != user) && !((bool)((JsonValue)context.Data["user"])["admin"]))
-				throw new WebException(403, 0, "Logged user has no sufficient credentials");
+			userService.EnsureIsAuthenticated(context);
+			if(context.User != user)
+				userService.EnsureCanAdminUser(context, user);
 		}
 
 		public void EnsureCanSearchSessions(HttpContext context)
 		{
-			if(context.User == null)
-				throw new WebException(401, 0, "Authentication needed");
-			if(!((bool)((JsonValue)context.Data["user"])["admin"]))
-				throw new WebException(403, 0, "Logged user has no sufficient credentials");
+			userService.EnsureIsAdmin(context);
 		}
 	}
 }

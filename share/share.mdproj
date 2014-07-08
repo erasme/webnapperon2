@@ -17,7 +17,7 @@
   <ItemGroup>
     <Folder Include="user\" />
     <Folder Include="www\" />
-    <Folder Include="www\font\" />
+    <Folder Include="wallpaper\" />
   </ItemGroup>
   <ItemGroup>
     <None Include="user\default.png" />
@@ -41,7 +41,6 @@
     <None Include="www\era\core\event.js" />
     <None Include="www\era\core\file.js" />
     <None Include="www\era\core\filepostuploader.js" />
-    <None Include="www\era\core\fingerevent.js" />
     <None Include="www\era\core\httprequest.js" />
     <None Include="www\era\core\mouseevent.js" />
     <None Include="www\era\core\object.js" />
@@ -92,14 +91,11 @@
     <None Include="www\era\ui\grid.js" />
     <None Include="www\era\ui\html.js" />
     <None Include="www\era\ui\icon.js" />
-    <None Include="www\era\ui\iconlist.js" />
     <None Include="www\era\ui\iframe.js" />
     <None Include="www\era\ui\image.js" />
-    <None Include="www\era\ui\keyboard.js" />
     <None Include="www\era\ui\label.js" />
     <None Include="www\era\ui\lbox.js" />
     <None Include="www\era\ui\lineargradient.js" />
-    <None Include="www\era\ui\linkable.js" />
     <None Include="www\era\ui\linkbutton.js" />
     <None Include="www\era\ui\listview.js" />
     <None Include="www\era\ui\loading.js" />
@@ -107,7 +103,6 @@
     <None Include="www\era\ui\matrix.js" />
     <None Include="www\era\ui\menu.js" />
     <None Include="www\era\ui\monthcalendar.js" />
-    <None Include="www\era\ui\mouseoverable.js" />
     <None Include="www\era\ui\movable.js" />
     <None Include="www\era\ui\notebook.js" />
     <None Include="www\era\ui\paned.js" />
@@ -120,7 +115,6 @@
     <None Include="www\era\ui\scrollable.js" />
     <None Include="www\era\ui\scrollingarea.js" />
     <None Include="www\era\ui\segmentbar.js" />
-    <None Include="www\era\ui\selectable.js" />
     <None Include="www\era\ui\separator.js" />
     <None Include="www\era\ui\shadow.js" />
     <None Include="www\era\ui\shape.js" />
@@ -136,7 +130,6 @@
     <None Include="www\era\ui\textareafield.js" />
     <None Include="www\era\ui\textbuttonfield.js" />
     <None Include="www\era\ui\textfield.js" />
-    <None Include="www\era\ui\togglable.js" />
     <None Include="www\era\ui\togglebutton.js" />
     <None Include="www\era\ui\toolbar.js" />
     <None Include="www\era\ui\transformable.js" />
@@ -145,7 +138,6 @@
     <None Include="www\era\ui\uploadable.js" />
     <None Include="www\era\ui\uploadbutton.js" />
     <None Include="www\era\ui\video.js" />
-    <None Include="www\era\ui\virtualkeyboard.js" />
     <None Include="www\wn\wn-debug.js" />
     <None Include="www\wn\wn.js" />
     <None Include="www\wn\calendar\app.js" />
@@ -162,16 +154,13 @@
     <None Include="www\wn\wn\contactmessagesdialog.js" />
     <None Include="www\wn\wn\contactview.js" />
     <None Include="www\wn\wn\croppedimage.js" />
-    <None Include="www\wn\wn\dualicon.js" />
     <None Include="www\wn\wn\groupiconview.js" />
     <None Include="www\wn\wn\logincreator.js" />
     <None Include="www\wn\wn\loginwizard.js" />
-    <None Include="www\wn\wn\mediaslider.js" />
     <None Include="www\wn\wn\menuswitch.js" />
     <None Include="www\wn\wn\message.js" />
     <None Include="www\wn\wn\messageview.js" />
     <None Include="www\wn\wn\preview.js" />
-    <None Include="www\wn\wn\progressbar.js" />
     <None Include="www\wn\wn\resource.js" />
     <None Include="www\wn\wn\resourcecreator.js" />
     <None Include="www\wn\wn\resourcenew.js" />
@@ -238,7 +227,6 @@
     <None Include="www\wn\wn\hdropbox.js" />
     <None Include="www\wn\wn\userstatsdialog.js" />
     <None Include="www\wn\wn\resourceviewgraphic.js" />
-    <None Include="www\wn\wn\appviewgraphic.js" />
     <None Include="www\wn\wn\carousel.js" />
     <None Include="www\era\ui\textbggraphic.js" />
     <None Include="www\era\ui\movablebase.js" />
@@ -259,40 +247,42 @@
     <None Include="www\wn\storage\filepropertiesdialog.js" />
     <None Include="www\wn\wn\queue.js" />
     <None Include="www\wn\wn\rfidreader.js" />
-    <None Include="www\font\Ubuntu-B.ttf" />
-    <None Include="www\font\Ubuntu-BI.ttf" />
-    <None Include="www\font\ubuntu-b-webfont.eot" />
-    <None Include="www\font\ubuntu-b-webfont.ttf" />
-    <None Include="www\font\ubuntu-b-webfont.woff" />
-    <None Include="www\font\Ubuntu-C.ttf" />
-    <None Include="www\font\Ubuntu-L.ttf" />
-    <None Include="www\font\Ubuntu-LI.ttf" />
-    <None Include="www\font\ubuntu-l-webfont.eot" />
-    <None Include="www\font\ubuntu-l-webfont.ttf" />
-    <None Include="www\font\ubuntu-l-webfont.woff" />
-    <None Include="www\font\Ubuntu-M.ttf" />
-    <None Include="www\font\Ubuntu-MI.ttf" />
-    <None Include="www\font\UbuntuMono-B.ttf" />
-    <None Include="www\font\UbuntuMono-BI.ttf" />
-    <None Include="www\font\UbuntuMono-R.ttf" />
-    <None Include="www\font\UbuntuMono-RI.ttf" />
-    <None Include="www\font\Ubuntu-R.ttf" />
-    <None Include="www\font\Ubuntu-RI.ttf" />
-    <None Include="www\font\ubuntu-r-webfont.eot" />
-    <None Include="www\font\ubuntu-r-webfont.ttf" />
-    <None Include="www\font\ubuntu-r-webfont.woff" />
     <None Include="www\era\ui\sflow.js" />
     <None Include="www\wn\wn\historymessagesdialog.js" />
     <None Include="www\wn\wn\newribbon.js" />
     <None Include="www\era\ui\contextbar.js" />
     <None Include="www\era\core\rtc.js" />
     <None Include="www\era\core\media.js" />
-    <None Include="www\wn\wn\videoconfdialog.js" />
     <None Include="www\tests\toolbar.html" />
     <None Include="www\era\ui\menutoolbar.js" />
     <None Include="www\wn\wn\userface.js" />
     <None Include="www\era\Makefile" />
     <None Include="www\wn\Makefile" />
+    <None Include="www\wn\wn\menutoolbar.js" />
+    <None Include="www\era\ui\carouselable2.js" />
+    <None Include="www\wn\wn\listaddbutton.js" />
+    <None Include="www\wn\wn\sflowdropbox.js" />
+    <None Include="www\wn\wn\videoconfview.js" />
+    <None Include="www\wn\wn\textfield.js" />
+    <None Include="www\wn\wn\groupfield.js" />
+    <None Include="www\wn\wn\textareafield.js" />
+    <None Include="www\era\ui\form.js" />
+    <None Include="www\wn\wn\stylesection.js" />
+    <None Include="www\wn\wn\field.js" />
+    <None Include="www\wn\wn\sliderfield.js" />
+    <None Include="www\wn\wn\checkfield.js" />
+    <None Include="www\wn\icons.js" />
+    <None Include="www\wn\storage\transformable.js" />
+    <None Include="www\wn\wn\ratiobox.js" />
+    <None Include="www\wn\wn\filepostuploader.js" />
+    <None Include="www\wn\wn\selectionbutton.js" />
+    <None Include="www\wn\wn\ratioimage.js" />
+    <None Include="www\wn\storage\texteditor.js" />
+    <None Include="www\wn\wn\datefield.js" />
+    <None Include="www\era\core\pointerevent.js" />
+    <None Include="www\era\ui\overable.js" />
+    <None Include="www\img\login_logo.png" />
+    <None Include="www\era\ui\dualicon.js" />
   </ItemGroup>
   <ProjectExtensions>
     <MonoDevelop>

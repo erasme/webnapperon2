@@ -49,6 +49,7 @@ using Erasme.Cloud.Message;
 using Erasme.Cloud.Manage;
 using Erasme.Cloud.StaticFiles;
 using Erasme.Cloud.Compatibility;
+using Erasme.Cloud.Utils;
 using Webnapperon2.PathLog;
 using Webnapperon2.News;
 using Webnapperon2.Picasa;
@@ -56,6 +57,10 @@ using Webnapperon2.Podcast;
 using Webnapperon2.User;
 using Webnapperon2.Rfid;
 using Webnapperon2.Resource;
+using Webnapperon2.Message;
+using Webnapperon2.Authentication;
+using Webnapperon2.Storage;
+using Webnapperon2.Manage;
 
 namespace Webnapperon2
 {
@@ -151,122 +156,170 @@ namespace Webnapperon2
 		AuthSessionService authSessionService;
 		UserService userService;
 
-		public Server(Setup setup): base(setup.Port)
+		public Server(JsonValue setup): base((int)setup["server"]["port"])
 		{
 			Setup = setup;
 
-			AllowGZip = Setup.AllowGZip;
+			// the setup part needed by clients
+			ClientSetup = new JsonObject();
+			ClientSetup.server = new JsonObject();
+			ClientSetup.server.name = new JsonPrimitive(ServerName);
+			ClientSetup.server.publicUrl = Setup.server.publicUrl;
+			ClientSetup.server.path = Setup.server.path;
+			ClientSetup.webRTC = Setup.webRTC;
+			ClientSetup.authentication = new JsonObject();
+			ClientSetup.authentication.session = Setup.authentication.session;
+			ClientSetup.authentication.services = new JsonArray();
+			ClientSetup.style = Setup.style;
+			ClientSetup.icons = Setup.icons;
+
+			AllowGZip = Setup.http.allowGZip;
 
 			// define the logger which handle logs
-			Logger = new FileLogger(Setup.Log+"/webnapperon2.log");
-			// define the task factory for long running tasks
-			LongRunningTaskFactory = new TaskFactory(new Erasme.Cloud.Utils.LimitedConcurrencyTaskScheduler(Setup.MaximumConcurrency));
+			Logger = new FileLogger(Setup.server.log+"/webnapperon2.log");
+			// define the task scheduler for long running tasks
+			LongRunningTaskScheduler = new PriorityTaskScheduler(Setup.server.maximumConcurrency);
 
 			authSessionService = new AuthSessionService(
-				Setup.Storage+"/authsession/", Setup.AuthSessionTimeout, Setup.AuthHeader,
-				Setup.AuthCookie);
-			authSessionService.Rights = new Webnapperon2.Authentication.AuthSessionRights();
+				Setup.server.storage+"/authsession/", Setup.authentication.session.timeout,
+				Setup.authentication.session.header, Setup.authentication.session.cookie);
 			// plugin to handle auth sessions
-			Add(new AuthSessionPlugin(authSessionService, Setup.AuthHeader, Setup.AuthCookie));
+			//Add(new AuthSessionPlugin(authSessionService, Setup.AuthHeader, Setup.AuthCookie));
 			// plugin to remove ETag support in iOS Safari because of iOS bugs
 			Add(new SafariETagPlugin());
 			// plugin to remove Keep-Alive support in iOS Safari because of iOS bugs
 			Add(new SafariKeepAlivePlugin());
-			// plugin to get the connected user JSON profil
-			UserPlugin userPlugin = new UserPlugin();
-			Add(userPlugin);
 
 			PathMapper mapper = new PathMapper();
 			Add(mapper);
 
 			// authentication session web service
-			mapper.Add(Setup.Path+"/authsession", authSessionService);
+			mapper.Add(Setup.server.path+"/authsession", authSessionService);
 
 			// public helper services
-			mapper.Add(Setup.Path+"/proxy", new ProxyService());
-			mapper.Add(Setup.Path+"/googleoauth2", new GoogleAuthenticationService(
-				Setup.GoogleClientId, Setup.GoogleClientSecret, Setup.GoogleAuthRedirectUrl,
-				OnGoogleGotUserProfile));
-			mapper.Add(Setup.Path+"/facebookoauth2", new FacebookAuthenticationService(
-				Setup.FacebookClientId, Setup.FacebookClientSecret, Setup.FacebookAuthRedirectUrl,
-				OnFacebookGotUserProfile));
+			mapper.Add(Setup.server.path+"/proxy", new ProxyService());
+			for(int i = 0; i < Setup.authentication.services.Count; i++) {
+				dynamic service = Setup.authentication.services[i];
+				if(service.type == "googleoauth2") {
+					mapper.Add(Setup.server.path + "/googleoauth2", new GoogleAuthenticationService(
+						service.clientId, service.clientSecret, (string)Setup.server.publicUrl + (string)Setup.server.path + "/googleoauth2",
+						new Erasme.Cloud.Google.GotUserProfileHandler(OnGoogleGotUserProfile)));
+					dynamic clientService = new JsonObject();
+					clientService.type = service.type;
+					clientService.url = new JsonPrimitive((string)Setup.server.publicUrl + (string)Setup.server.path + "/googleoauth2/redirect");
+					ClientSetup.authentication.services.Add(clientService);
+				}
+				else if(service.type == "facebookoauth2") {
+					mapper.Add(Setup.server.path + "/facebookoauth2", new FacebookAuthenticationService(
+						service.clientId, service.clientSecret, (string)Setup.server.publicUrl + (string)Setup.server.path + "/facebookoauth2",
+						new Erasme.Cloud.Facebook.GotUserProfileHandler(OnFacebookGotUserProfile)));
+					dynamic clientService = new JsonObject();
+					clientService.type = service.type;
+					clientService.url = new JsonPrimitive((string)Setup.server.publicUrl + (string)Setup.server.path + "/facebookoauth2/redirect");
+					ClientSetup.authentication.services.Add(clientService);
+				}
+				else {
+					ClientSetup.authentication.services.Add(service);
+				}
+			}
+			mapper.Add(Setup.server.path+"/wallpaper/", new Webnapperon2.Wallpaper.WallpaperService(Setup.server["static"] + "/wallpaper/", Setup.http.defaultCacheDuration));
+
+			// service for a client to get the server setup
+			mapper.Add(Setup.server.path + "/setup", new JsonContent(ClientSetup));
 
 			// file storage
 			StorageService storageService = new StorageService(
-				Setup.Storage+"/storage/", Setup.TemporaryDirectory, Setup.DefaultCacheDuration, Logger);
-			mapper.Add(Setup.Path+"/storage", storageService);
-			mapper.Add(Setup.Path+"/preview", new PreviewService(Setup.Storage+"/preview/", storageService, 64, 64, Setup.TemporaryDirectory, Setup.DefaultCacheDuration, Logger));
-			mapper.Add(Setup.Path+"/previewhigh", new PreviewService(Setup.Storage+"/previewhigh/", storageService, 1024, 768, Setup.TemporaryDirectory, Setup.DefaultCacheDuration, Logger));
-			mapper.Add(Setup.Path+"/audio", new AudioService(Setup.Storage+"/audio/", storageService, Setup.TemporaryDirectory, Setup.DefaultCacheDuration, LongRunningTaskFactory));
-			mapper.Add(Setup.Path+"/video", new VideoService(Setup.Storage+"/video/", storageService, Setup.TemporaryDirectory, Setup.DefaultCacheDuration, LongRunningTaskFactory));
-			mapper.Add(Setup.Path+"/pdf", new PdfService(Setup.Storage+"/pdf/", storageService, Setup.TemporaryDirectory, Setup.DefaultCacheDuration, LongRunningTaskFactory));
-			Webnapperon2.Storage.StorageRights storageRights = new Webnapperon2.Storage.StorageRights();
-			storageService.Rights = storageRights;
+				Setup.server.storage+"/storage/",Setup.server.temporaryDirectory,
+				Setup.http.defaultCacheDuration, Logger);
+			mapper.Add(Setup.server.path+"/storage", storageService);
+			mapper.Add(Setup.server.path+"/preview",
+				new PreviewService(Setup.server.storage+"/preview/", storageService,
+					64, 64, Setup.server.temporaryDirectory,
+					Setup.http.defaultCacheDuration, Logger));
+			mapper.Add(Setup.server.path+"/previewhigh",
+				new PreviewService(Setup.server.storage+"/previewhigh/", storageService,
+					1024, 768, Setup.server.temporaryDirectory,
+					Setup.http.defaultCacheDuration, Logger));
+			mapper.Add(Setup.server.path+"/audio",
+				new AudioService(Setup.server.storage+"/audio/", storageService,
+					Setup.server.temporaryDirectory, Setup.http.defaultCacheDuration,
+					LongRunningTaskScheduler));
+			mapper.Add(Setup.server.path+"/video",
+				new VideoService(Setup.server.storage+"/video/", storageService,
+					Setup.server.temporaryDirectory, Setup.http.defaultCacheDuration,
+					LongRunningTaskScheduler));
+			mapper.Add(Setup.server.path+"/pdf",
+				new PdfService(Setup.server.storage+"/pdf/", storageService,
+					Setup.server.temporaryDirectory, Setup.http.defaultCacheDuration,
+					LongRunningTaskScheduler));
 
 			//storageService.AddPlugin(new TestPlugin());
 			//storageService.AddPlugin(new ImagePlugin());
 
 			// messagerie
-			MessageService messageService = new MessageService(Setup.Storage+"/message/");
-			messageService.Rights = new Webnapperon2.Message.MessageRights();
-			mapper.Add(Setup.Path+"/message", messageService);
+			MessageService messageService = new MessageService(Setup.server.storage+"/message/");
+			mapper.Add(Setup.server.path+"/message", messageService);
 
 			// Queue
 			QueueService queueService = new QueueService();
-			mapper.Add(Setup.Path+"/queue", queueService);
+			mapper.Add(Setup.server.path+"/queue", queueService);
 
 			PicasaService picasaService = new PicasaService(
-				Setup.Storage+"/picasa/", storageService, LongRunningTaskFactory, Logger);
+				Setup.server.storage+"/picasa/", storageService, LongRunningTaskScheduler, Logger);
 			PodcastService podcastService = new PodcastService(
-				Setup.Storage+"/podcast/", storageService, LongRunningTaskFactory, Logger);
+				Setup.server.storage+"/podcast/", storageService, LongRunningTaskScheduler, Logger);
 			NewsService newsService = new NewsService(
-				Setup.Storage+"/news/", storageService, Setup.TemporaryDirectory,
-				LongRunningTaskFactory, Logger);
+				Setup.server.storage+"/news/", storageService, Setup.server.temporaryDirectory,
+				LongRunningTaskScheduler, Logger);
 
 			// user
 			userService = new UserService(
-				Setup.ServerName, Setup.Port, Setup.PublicUrl,
+				Setup.server.name, Setup.server.port, Setup.server.publicUrl,
 				authSessionService, storageService,
 				messageService, picasaService, podcastService, newsService,
-				Setup.Storage+"/user/", Setup.Static+"/user/",
-				Setup.AuthHeader, Setup.AuthCookie, Setup.SmtpServer,
-				Setup.SmtpFrom, Setup.TemporaryDirectory, Setup.DefaultCacheDuration, Logger);
-			mapper.Add(Setup.Path+"/user", userService);
-			userPlugin.UserService = userService;
-			storageRights.UserService = userService;
+				Setup.server.storage+"/user/", Setup.server["static"]+"/user/",
+				Setup.authentication.session.header, Setup.authentication.session.cookie, Setup.mail.servers[0].host,
+				Setup.mail.from, Setup.server.temporaryDirectory, Setup.http.defaultCacheDuration, Logger);
+			mapper.Add(Setup.server.path+"/user", userService);
 			picasaService.UserService = userService;
 			podcastService.UserService = userService;
 			newsService.UserService = userService;
 
+			messageService.Rights = new MessageRights(userService);
+			authSessionService.Rights = new AuthSessionRights(userService);
+			storageService.Rights = new StorageRights(userService);
+
 			// resource
-			mapper.Add(Setup.Path+"/resource", new ResourceService(userService));
+			mapper.Add(Setup.server.path+"/resource", new ResourceService(userService));
 
 			// pathlogs
-			PathLogService pathLogService = new PathLogService(Setup.Storage + "/pathlog");
-			pathLogService.Rights = new Webnapperon2.PathLog.PathLogRights();
-			mapper.Add(Setup.Path+"/pathlog", pathLogService);
+			PathLogService pathLogService = new PathLogService(Setup.server.storage + "/pathlog");
+			pathLogService.Rights = new PathLogRights(userService);
+			mapper.Add(Setup.server.path+"/pathlog", pathLogService);
 
 			// RFID
-			mapper.Add(Setup.Path+"/rfid", new RfidService(userService, messageService, queueService, Logger));
+			mapper.Add(Setup.server.path+"/rfid", new RfidService(userService, messageService, queueService, Logger));
 
 			// management
-			ManageService manageService = new ManageService();
-			manageService.Rights = new Webnapperon2.Manage.ManageRights();
-			mapper.Add(Setup.Path+"/status", manageService);
+			ManageService manageService = new ManageService(LongRunningTaskScheduler);
+			manageService.Rights = new ManageRights(userService);
+			mapper.Add(Setup.server.path+"/status", manageService);
 
 			// static file distribution (web app)
-			Add(new StaticFilesService(Setup.Static+"/www/", Setup.DefaultCacheDuration));
+			Add(new StaticFilesService(Setup.server["static"]+"/www/", Setup.http.defaultCacheDuration));
 
 			// replace application/json by text/plain for IE <9
 			// force IE8 to render un compatibility mode (IE7)
 			Add(new IECompatibilityPlugin());
 		}
 
-		public Setup Setup { get; private set; }
+		public dynamic Setup { get; private set; }
+
+		public dynamic ClientSetup { get; private set; }
 
 		public ILogger Logger { get; private set; }
 
-		public TaskFactory LongRunningTaskFactory { get; private set; }
+		public PriorityTaskScheduler LongRunningTaskScheduler { get; private set; }
 
 		void OnGoogleGotUserProfile(JsonValue token, JsonValue profile, HttpContext context, string state)
 		{
@@ -297,7 +350,7 @@ namespace Webnapperon2
 					}
 					// connect the user it and redirect it
 					JsonValue authSession = authSessionService.Create(user.ToString());
-					context.Response.Headers["set-cookie"] = Setup.AuthCookie+"="+(string)authSession["id"]+"; Path=/";
+					context.Response.Headers["set-cookie"] = Setup.authentication.session.cookie+"="+(string)authSession["id"]+"; Path=/";
 				}
 				context.Response.StatusCode = 307;
 				context.Response.Headers["cache-control"] = "no-cache, must-revalidate";
@@ -340,7 +393,7 @@ namespace Webnapperon2
 					}
 					// connect the user it and redirect it
 					JsonValue authSession = authSessionService.Create(user.ToString());
-					context.Response.Headers["set-cookie"] = Setup.AuthCookie+"="+(string)authSession["id"]+"; Path=/";
+					context.Response.Headers["set-cookie"] = Setup.authentication.session.cookie+"="+(string)authSession["id"]+"; Path=/";
 				}
 				context.Response.StatusCode = 307;
 				context.Response.Headers["cache-control"] = "no-cache, must-revalidate";

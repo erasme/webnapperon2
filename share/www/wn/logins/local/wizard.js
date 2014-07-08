@@ -43,15 +43,11 @@ Wn.WizardItem.extend('Wn.Local.Wizard', {
 		var vbox = new Ui.VBox({ spacing: 10 });
 		this.setContent(vbox);
 
-		vbox.append(new Ui.Label({ text: 'Identifiant:', horizontalAlign: 'left' }));
-
-		this.loginField = new Ui.TextField({ marginLeft: 20 });
+		this.loginField = new Wn.TextField({ title: 'Identifiant' });
 		this.connect(this.loginField, 'change', this.onChange);
 		vbox.append(this.loginField);
 
-		vbox.append(new Ui.Label({ text: 'Mot de passe:', horizontalAlign: 'left' }));
-
-		this.passwordField = new Ui.TextField({ marginLeft: 20, passwordMode: true });
+		this.passwordField = new Wn.TextField({ title: 'Mot de passe', passwordMode: true });
 		this.connect(this.passwordField, 'change', this.onChange);
 		vbox.append(this.passwordField);
 

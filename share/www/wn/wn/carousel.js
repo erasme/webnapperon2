@@ -129,7 +129,7 @@ Ui.Container.extend('Wn.Carouselable',
 
 	append: function(child) {
 		var item = new Wn.CarouselContent();
-		item.setContent(Ui.Element.create(child));
+		item.setContent(child);
 		item.hide();
 		this.appendChild(item);
 	},
@@ -146,7 +146,7 @@ Ui.Container.extend('Wn.Carouselable',
 
 	insertAt: function(child, pos) {
 		var item = new Wn.CarouselContent();
-		item.setContent(Ui.Element.create(child));
+		item.setContent(child);
 		item.hide();
 		this.insertChildAt(item, pos);
 	},

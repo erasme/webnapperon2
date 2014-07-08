@@ -1,5 +1,5 @@
 
-Ui.Selectionable.extend('Wn.AddContactIcon', {
+Wn.SelectionButton.extend('Wn.AddContactIcon', {
 	user: undefined,
 	contact: undefined,
 	dialog: undefined,
@@ -14,20 +14,13 @@ Ui.Selectionable.extend('Wn.AddContactIcon', {
 		this.dialog = config.dialog;
 		delete(config.dialog);
 
-		var vbox = new Ui.VBox({ margin: 5 });
-		this.append(vbox);
+		var lbox = new Ui.LBox({ horizontalAlign: 'center' });
+		this.setIcon(lbox);
 
-		this.selectableBox = new Ui.LBox({ horizontalAlign: 'center' });
-		vbox.append(this.selectableBox);
+		lbox.append(new Ui.Rectangle({ fill: '#f1f1f1' }));
 
-		this.selectableBox.append(new Ui.Rectangle({ fill: '#999999' }));
-		this.selectableBox.append(new Ui.Rectangle({ fill: '#f1f1f1', margin: 1 }));
-
-		this.image = new Ui.Image({ width: 64, height: 64, margin: 1, src: this.contact.getFaceUrl() });
-		this.selectableBox.append(this.image);
-
-		this.label = new Ui.CompactLabel({ text: '', fontSize: 14, margin: 3, width: 90, maxLine: 2, textAlign: 'center', color: '#67696c', horizontalAlign: 'center' });
-		vbox.append(this.label);
+		this.image = new Ui.Image({ width: 64, height: 64, src: this.contact.getFaceUrl() });
+		lbox.append(this.image);
 	},
 
 	getContact: function() {
@@ -35,9 +28,16 @@ Ui.Selectionable.extend('Wn.AddContactIcon', {
 	},
 
 	onContactChange: function() {
-		this.label.setText(this.contact.getFirstname()+' '+this.contact.getLastname());
+		this.setText(this.contact.getName());
 	}	
 }, {
+	onStyleChange: function() {
+		Wn.AddContactIcon.base.onStyleChange.apply(this, arguments);
+		var iconSize = this.getStyleProperty('iconSize');
+		this.image.setWidth(iconSize);
+		this.image.setHeight(iconSize);
+	},
+
 	getSelectionActions: function() {
 		return Wn.AddContactIcon.contactActions;
 	},
@@ -60,6 +60,10 @@ Ui.Selectionable.extend('Wn.AddContactIcon', {
 
 	constructor: function() {
 		Wn.AddContactIcon.contactActions = {
+			profil: {
+				text: 'Profil', icon: 'person', testRight: Wn.AddContactIcon.testIsAdmin,
+				callback: Wn.AddContactIcon.onContactProfil, multiple: false
+			},
 			view: {
 				"default": true,
 				text: 'Voir', icon: 'eye',
@@ -80,6 +84,10 @@ Ui.Selectionable.extend('Wn.AddContactIcon', {
 			(Ui.App.current.getUser().getContact(this.contact.getId()) === undefined));
 	},
 
+	testIsAdmin: function() {
+		return Ui.App.current.getUser().isAdmin();
+	},
+
 	onContactAdd: function(selection) {
 		var contacts = [];
 		var icons = [];
@@ -95,15 +103,18 @@ Ui.Selectionable.extend('Wn.AddContactIcon', {
 	onContactView: function(selection) {
 		Ui.App.current.setMainPath('user:'+selection.getElements()[0].getContact().getId());
 		selection.getElements()[0].dialog.close();
+	},
+
+	onContactProfil: function(selection) {
+		var dialog = new Wn.UserProfil({ user: selection.getElements()[0].getContact() });
+		dialog.open();
+		selection.getElements()[0].dialog.close();
 	}
 });
 
 
 Wn.AddContactIcon.extend('Wn.AddContactRightIcon', {
 	constructor: function() {
-		this.image.setWidth(46);
-		this.image.setHeight(46);
-		this.label.setWidth(80);
 	}
 }, {
 	getSelectionActions: function() {

@@ -44,8 +44,22 @@ Core.Object.extend('Wn.User', {
 
 		// handle messages
 		this.messages = [];
-//		if(this.monitor)
-//			this.startMessagesMonitoring();
+		this.updateMessages();
+	},
+
+	getName: function() {	
+		if(!this.getIsReady())
+			return '';
+		else if((this.getData().firstname === null) && (this.getData().lastname === null) && (this.getData().login === null))
+			return '';
+		else if((this.getData().firstname === null) && (this.getData().lastname === null))
+			return this.getData().login;
+		else if(this.getData().firstname === null)
+			return this.getData().lastname;
+		else if(this.getData().lastname === null)
+			return this.getData().firstname; 
+		else
+			return this.getData().firstname+' '+this.getData().lastname;
 	},
 
 	getIsReady: function() {
@@ -303,7 +317,57 @@ Core.Object.extend('Wn.User', {
 		if(!this.userSocketAlive)
 			this.updateUser();
   	},
-	
+
+  	getWallpaper: function() {
+  		if((this.user.data !== null) && (this.user.data !== undefined) && (this.user.data.wallpaper !== undefined))
+  			return this.user.data.wallpaper;
+  		else
+  			return "default.jpeg";
+	},
+
+	setWallpaper: function(wallpaper) {
+		this.changeData({ wallpaper: wallpaper });
+	},
+
+	getTheme: function() {
+  		if((this.user.data !== null) && (this.user.data !== undefined) && (this.user.data.theme !== undefined))
+  			return this.user.data.theme;
+  		else
+  			return "default";
+	},
+
+	setTheme: function(theme) {
+		this.changeData({ theme: theme });
+	},
+
+	getCustomTheme: function() {
+  		if((this.user.data !== null) && (this.user.data !== undefined) && (this.user.data.theme !== undefined))
+  			return this.user.data.customTheme;
+  		else
+  			return undefined;
+	},
+
+	setCustomTheme: function(customTheme) {
+		this.changeData({ customTheme: customTheme });
+	},
+
+	changeData: function(diff) {
+		var data;
+		if((this.user.data !== null) && (this.user.data !== undefined))
+			data = this.user.data;
+		else
+			data = {};
+		for(var key in diff)
+			data[key] = diff[key];
+		this.data = data;
+		var request = new Core.HttpRequest({
+			method: 'PUT',
+			url: '/cloud/user/'+this.id,
+			content: JSON.stringify({ data: data })
+		});
+		request.send();
+	},
+
 	updateUser: function() {
 		// this is not the best idea because we can loose some updates
 		//  but with low perf network the update might never succeed if
@@ -498,7 +562,7 @@ Core.Object.extend('Wn.User', {
 		//  but with low perf network the update might never succeed if
 		// we abort the previous request.
 		if(this.messagesRequest !== undefined)
-			return;	
+			return;
 		this.messagesRequest = new Core.HttpRequest({ url: '/cloud/message?limit=50&user='+this.id });
 		this.connect(this.messagesRequest, 'done', this.onGetMessagesDone);
 		this.connect(this.messagesRequest, 'error', this.onGetMessagesError);
@@ -508,7 +572,7 @@ Core.Object.extend('Wn.User', {
 	updateMessage: function(message) {
 		// search if we known this message
 		var found = undefined;
-		for(var i2 = 0; (found == undefined) && (i2 < this.messages.length); i2++) {
+		for(var i2 = 0; (found === undefined) && (i2 < this.messages.length); i2++) {
 			if(message.id == this.messages[i2].getMessage().id)
 				found = this.messages[i2];
 		}
@@ -556,7 +620,7 @@ Core.Object.extend('Wn.User', {
 				if(messages[i].id == this.messages[i2].getMessage().id)
 					found = this.messages[i2];
 			}
-			if(found == undefined)
+			if(found === undefined)
 				found = new Wn.Message({ message: messages[i] });
 			else
 				found.updateData(messages[i]);

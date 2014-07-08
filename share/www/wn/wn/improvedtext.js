@@ -1,31 +1,19 @@
 
-Ui.Html.extend('Wn.ImproveText', {
-	text: '',
+Ui.Html.extend('Wn.ImprovedText', {
 
 	constructor: function() {
+		this.getDrawing().style.wordWrap = 'break-word';
 		this.connect(this, 'link', this.onLink);
 	},
-	
-	generateHtml: function(text) {
-		// convert into HTML
-		var div = document.createElement('div');
-		if('textContent' in div)
-			div.textContent = text;
-		else
-			div.innerText = text;
-		text = div.innerHTML;
-		// get the HTML color def
-		var color;
-		if(navigator.supportRgba)
-			color = this.getStyleProperty('color').getCssRgba();
-		else
-			color = this.getStyleProperty('color').getCssHtml();
+
+	convertTextLinkToHtml: function() {
+		var text = this.getHtml();
 		var linkColor;
 		if(navigator.supportRgba)
-			linkColor = this.getStyleProperty('linkColor').getCssRgba();
+			linkColor = Ui.Color.create(this.getStyleProperty('linkColor')).getCssRgba();
 		else
-			linkColor = this.getStyleProperty('linkColor').getCssHtml();
-
+			linkColor = Ui.Color.create(this.getStyleProperty('linkColor')).getCssHtml();
+		
 		// replace http:// and https:// with A link
 		var content = '';
 		while((text.indexOf('http://') != -1) || (text.indexOf('https://') != -1)) {
@@ -35,20 +23,17 @@ Ui.Html.extend('Wn.ImproveText', {
 			else if((text.indexOf('https://') != -1) && (text.indexOf('https://') < pos))
 				pos = text.indexOf('https://');
 			var end = pos;
-			for(end = pos; (end < text.length) && (text.charAt(end) != ' ') && (text.charAt(end) != '\t')  && (text.charAt(end) != '\n') && (text.charAt(end) != '"') && (text.charAt(end) != '\'') && (text.charAt(end) != '&'); end++) {}
+			for(end = pos; (end < text.length) && (text.charAt(end) !== ' ') && 
+				(text.charAt(end) !== '\t')  && (text.charAt(end) !== '\n') &&
+				(text.charAt(end) !== '"') && (text.charAt(end) !== '\'') &&
+				(text.charAt(end) !== '&') && (text.charAt(end) !== '<'); end++) {}
 			var url = text.substr(pos, end-pos);
 			content += text.substr(0, pos);
 			content += '<a href="'+url+'" style="cursor: pointer; text-decoration: underline; color: '+linkColor+'">'+url+'</a>';
 			text = text.substr(end);
 		}
 		content += text;
-		// interpret \n as <br>
-		content = content.replace(new RegExp('\n','g'), '<br>');
-
-		var html = '<div style="word-wrap: break-word; font-family: '+this.getStyleProperty('fontFamily')+';font-size: '+this.getStyleProperty('fontSize')+'px;font-weight: '+this.getStyleProperty('fontWeight')+';color: '+color+';">';
-		html += content;
-		html += '</div>';
-		return html;
+		this.setHtml(content);
 	},
 	
 	onLink: function(element, url) {
@@ -80,25 +65,25 @@ Ui.Html.extend('Wn.ImproveText', {
 		}
 	}
 }, {
-	getText: function() {
-		return this.text;
-	},
-
 	setText: function(text) {
-		this.text = text;
-		this.setHtml(this.generateHtml(this.text));
-		this.invalidateMeasure();
+		Wn.ImprovedText.base.setText.apply(this, arguments);
+		this.convertTextLinkToHtml();
 	},
 	
-	onStyleChange: function() {		
-		this.setText(this.text);
+	onStyleChange: function() {
+		Wn.ImprovedText.base.onStyleChange.apply(this, arguments);
+		// update link color
+		var linkColor;
+		if(navigator.supportRgba)
+			linkColor = Ui.Color.create(this.getStyleProperty('linkColor')).getCssRgba();
+		else
+			linkColor = Ui.Color.create(this.getStyleProperty('linkColor')).getCssHtml();
+		var links = this.getElements('A');
+		for(var i = 0; i < links.length; i++)
+			links[i].style.color = linkColor;
 	}
 }, {
 	style: {
-		color: new Ui.Color({ r: 0, g: 0, b: 0 }),
-		fontSize: 18,
-		fontFamily: 'Sans-serif',
-		fontWeight: 'normal',
 		linkColor: new Ui.Color({ r: 0.3, g: 0.3, b: 0.3 })
 	}
 });

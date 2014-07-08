@@ -41,6 +41,7 @@ using Erasme.Json;
 using Erasme.Cloud;
 using Erasme.Cloud.Logger;
 using Erasme.Cloud.Storage;
+using Erasme.Cloud.Utils;
 using NReadability;
 using Webnapperon2.User;
 
@@ -51,15 +52,16 @@ namespace Webnapperon2.News
 		StorageService storageService;
 		ILogger logger;
 		string temporaryDirectory;
-		TaskFactory longRunningTaskFactory;
+		PriorityTaskScheduler longRunningTaskScheduler;
 		object instanceLock = new object();
-		Dictionary<string,Task> runningTasks = new Dictionary<string, Task>();
+		Dictionary<string,LongTask> runningTasks = new Dictionary<string, LongTask>();
 
-		public NewsService(string basePath, StorageService storageService, string temporaryDirectory, TaskFactory longRunningTaskFactory, ILogger logger)
+		public NewsService(string basePath, StorageService storageService, string temporaryDirectory,
+			PriorityTaskScheduler longRunningTaskScheduler, ILogger logger)
 		{
 			this.storageService = storageService;
 			this.temporaryDirectory = temporaryDirectory;
-			this.longRunningTaskFactory = longRunningTaskFactory;
+			this.longRunningTaskScheduler = longRunningTaskScheduler;
 			this.logger = logger;
 		}
 
@@ -81,12 +83,16 @@ namespace Webnapperon2.News
 			bool fullcontent = false;
 			if(data.ContainsKey("fullcontent"))
 				fullcontent = data["fullcontent"];
+			bool originalarticle = false;
+			if(data.ContainsKey("originalarticle"))
+				originalarticle = data["originalarticle"];
 
 			// create a corresponding storage
 			string storageId = storageService.CreateStorage(-1);
 			JsonValue json = new JsonObject();
 			json["url"] = url;
 			json["fullcontent"] = fullcontent;
+			json["originalarticle"] = originalarticle;
 			json["utime"] = 0;
 			json["failcount"] = 0;
 
@@ -99,6 +105,9 @@ namespace Webnapperon2.News
 			JsonValue json = JsonValue.Parse(data["data"]);
 			data["url"] = json["url"];
 			data["fullcontent"] = json["fullcontent"];
+			data["originalarticle"] = false;
+			if(json.ContainsKey("originalarticle"))
+				data["originalarticle"] = json["originalarticle"];
 			data["utime"] = json["utime"];
 			data["failcount"] = json["failcount"];
 			long utime = (long)data["utime"];
@@ -122,6 +131,13 @@ namespace Webnapperon2.News
 					json["fullcontent"] = diff["fullcontent"];
 				else
 					json["fullcontent"] = data["fullcontent"];
+				if(diff.ContainsKey("originalarticle"))
+					json["originalarticle"] = diff["originalarticle"];
+				else {
+					json["originalarticle"] = false;
+					if(data.ContainsKey("originalarticle"))
+						json["originalarticle"] = data["originalarticle"];
+				}
 				if(diff.ContainsKey("utime"))
 					json["utime"] = (long)diff["utime"];
 				else
@@ -251,6 +267,9 @@ namespace Webnapperon2.News
 			string storage = data["storage_id"];
 			string url = data["url"];
 			bool fullcontent = data["fullcontent"];
+			bool originalarticle = false;
+			if(data.ContainsKey("originalarticle"))
+				originalarticle = data["originalarticle"];
 
 			List<NewsElement> newItems = new List<NewsElement>();
 			Dictionary<string, JsonValue> storageItems = new Dictionary<string, JsonValue>();
@@ -353,20 +372,37 @@ namespace Webnapperon2.News
 					if(p.Date != null)
 						meta["pubDate"] = p.Date;
 					string htmlContent = p.Content;
-					// if wanted, try to get the full content
-					if((fullcontent) && (p.Link != null) && (p.Title != null)) {
-						string full = GetFullContent(p.Link, p.Title, p.Content);
-						if(full != null)
-							htmlContent = full;
+
+					if(originalarticle) {
+						if((p.Link != null) && (p.Title != null)) {
+							meta["iframe"] = "true";
+							string tmpFile = temporaryDirectory + "/" + Guid.NewGuid().ToString();
+
+							using(StreamWriter writer = File.CreateText(tmpFile)) {
+								writer.Write(p.Link);
+								writer.Close();
+							}
+							storageService.CreateFile(
+								storage, 0, p.Title, "text/uri-list",
+								tmpFile, define, true);
+						}
 					}
-					string tmpFile = temporaryDirectory+"/"+Guid.NewGuid().ToString();
-					using(StreamWriter writer = File.CreateText(tmpFile)) {
-						writer.Write(htmlContent);
-						writer.Close();
+					else {
+						// if wanted, try to get the full content
+						if((fullcontent) && (p.Link != null) && (p.Title != null)) {
+							string full = GetFullContent(p.Link, p.Title, p.Content);
+							if(full != null)
+								htmlContent = full;
+						}
+						string tmpFile = temporaryDirectory + "/" + Guid.NewGuid().ToString();
+						using(StreamWriter writer = File.CreateText(tmpFile)) {
+							writer.Write(htmlContent);
+							writer.Close();
+						}
+						storageService.CreateFile(
+							storage, 0, p.Title, "application/x-webnapperon2-rss-item",
+							tmpFile, define, true);
 					}
-					storageService.CreateFile(
-						storage, 0, p.Title, "application/x-webnapperon2-rss-item",
-						tmpFile, define, true);
 				}
 				// delete items
 				if(ts.ContainsKey("children")) {
@@ -378,23 +414,20 @@ namespace Webnapperon2.News
 				}
 			}
 			// update news update values
-			long quota, used, ctime, mtime, rev;
-			storageService.GetStorageInfo(storage, out quota, out used, out ctime, out mtime, out rev);
 			JsonValue diff = new JsonObject();
-			diff["rev"] = rev;
 			diff["failcount"] = 0;
 			diff["utime"] = (long)(DateTime.UtcNow.Ticks / 10000);
-			UserService.ChangeResource(id, diff, null);
+			UserService.ChangeResourceUpdateStorage(data, diff);
 		}
 
 		public void QueueUpdateNews(JsonValue data)
 		{
-			Task task = null;
+			LongTask task = null;
 			string id = data["id"];
 			long failcount = data["failcount"];
 			lock(instanceLock) {
-				if(!runningTasks.ContainsKey(id.ToString())) {
-					task = new Task(delegate {
+				if(!runningTasks.ContainsKey(id)) {
+					task = new LongTask(delegate {
 						try {
 							UpdateNews(id);
 						}
@@ -403,21 +436,22 @@ namespace Webnapperon2.News
 							// mark the fail in the db
 							JsonValue diff = new JsonObject();
 							diff["failcount"] = failcount + 1;
+							diff["utime"] = (long)(DateTime.UtcNow.Ticks / 10000);
 							UserService.ChangeResource(id, diff, null);
 
 						} finally {
 							// remove the task
 							lock(instanceLock) {
-								if(runningTasks.ContainsKey(id.ToString()))
-									runningTasks.Remove(id.ToString());
+								if(runningTasks.ContainsKey(id))
+									runningTasks.Remove(id);
 							}
 						}
-					});
-					runningTasks[id.ToString()] = task;
+					}, null, "Update news "+id, LongTaskPriority.Low);
+					runningTasks[id] = task;
 				}
 			}
 			if(task != null)
-				task.Start(longRunningTaskFactory.Scheduler);
+				longRunningTaskScheduler.Start(task);
 		}
 	}
 }

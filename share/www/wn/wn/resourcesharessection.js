@@ -10,13 +10,13 @@ Ui.Dialog.extend('Wn.ResourceSharesModifyDialog', {
 		this.selection = config.selection;
 		delete(config.selection);
 
-		this.setPreferedWidth(400);
-		this.setPreferedHeight(400);
+		this.setPreferredWidth(400);
+		this.setPreferredHeight(400);
 		this.setFullScrolling(true);
 		this.setTitle('Modification des droits');
-		this.setCancelButton(new Ui.Button({ text: 'Fermer' }));
+		this.setCancelButton(new Ui.DialogCloseButton());
 
-		this.modifyButton = new Ui.Button({ text: 'Appliquer' });
+		this.modifyButton = new Ui.DefaultButton({ text: 'Appliquer' });
 		this.connect(this.modifyButton, 'press', this.onModifyPress);
 
 		this.setActionButtons([ this.modifyButton ]);
@@ -79,7 +79,7 @@ Ui.Dialog.extend('Wn.ResourceSharesModifyDialog', {
 	}
 });
 
-Ui.Selectionable.extend('Wn.ResourceRight', {
+Wn.SelectionButton.extend('Wn.ResourceRight', {
 }, {
 	getSelectionActions: function() {
 		return Wn.ResourceRight.rightActions;
@@ -132,28 +132,22 @@ Wn.ResourceRight.extend('Wn.ResourceContactRight', {
 		delete(config.user);
 		this.right = config.right;
 		delete(config.right);
-		
-		var vbox = new Ui.VBox();
-		this.setContent(vbox);
 
 		var lbox = new Ui.LBox({ horizontalAlign: 'center', verticalAlign: 'bottom' });
-		vbox.append(lbox);
-		lbox.append(new Ui.Rectangle({ fill: '#999999' }));
-		lbox.append(new Ui.Rectangle({ fill: '#f1f1f1', margin: 1 }));
+		lbox.append(new Ui.Rectangle({ fill: '#f1f1f1' }));
 
-		this.image = new Ui.Image({ width: 46, height: 46, margin: 1 });
+		this.image = new Ui.Image({ width: 46, height: 46 });
 		lbox.append(this.image);
 
 		var hbox = new Ui.HBox({ uniform: true, verticalAlign: 'bottom', horizontalAlign: 'right', margin: 3 });
-		this.shareRight = new Wn.DualIcon({ icon: 'share', fill: '#f1f1f1', width: 20, height: 20 });
+		this.shareRight = new Ui.DualIcon({ icon: 'share', fill: '#f1f1f1', width: 20, height: 20 });
 		hbox.append(this.shareRight);
-		this.writeRight = new Wn.DualIcon({ icon: 'pen', fill: '#f1f1f1', width: 20, height: 20 });
+		this.writeRight = new Ui.DualIcon({ icon: 'pen', fill: '#f1f1f1', width: 20, height: 20 });
 		hbox.append(this.writeRight);
 		lbox.append(hbox);
 
-		this.label = new Ui.CompactLabel({ text: '', fontSize: 14, width: 80, maxLine: 2, textAlign: 'center', color: '#67696c', horizontalAlign: 'center' });
-		vbox.append(this.label);
-		
+		this.setIcon(lbox);
+
 		this.contact = Wn.Contact.getContact(this.right.user_id);
 	},
 
@@ -194,7 +188,7 @@ Wn.ResourceRight.extend('Wn.ResourceContactRight', {
 	},
 
 	onContactChange: function() {
-		this.label.setText(this.contact.getFirstname()+' '+this.contact.getLastname());
+		this.setText(this.contact.getName());
 		this.image.setSrc(this.contact.getFaceUrl());
 	}
 }, {
@@ -235,24 +229,16 @@ Wn.ResourceRight.extend('Wn.ResourceWorldRight', {
 		this.right.user_id = -1;
 		delete(config.right);
 
-		var vbox = new Ui.VBox();
-		this.setContent(vbox);
-
-		var lbox = new Ui.LBox({ horizontalAlign: 'center', verticalAlign: 'bottom' });
-		vbox.append(lbox);
-
-		this.image = new Ui.Icon({ width: 48, height: 48, fill: '#444444', icon: 'earth', margin: 1 });
-		lbox.append(this.image);
+		this.setIcon('earth');
 
 		var hbox = new Ui.HBox({ uniform: true, verticalAlign: 'bottom', horizontalAlign: 'right', margin: 3 });
-		this.shareRight = new Wn.DualIcon({ icon: 'share', fill: '#f1f1f1', width: 20, height: 20 });
+		this.shareRight = new Ui.DualIcon({ icon: 'share', fill: '#f1f1f1', width: 20, height: 20 });
 		hbox.append(this.shareRight);
-		this.writeRight = new Wn.DualIcon({ icon: 'pen', fill: '#f1f1f1', width: 20, height: 20 });
+		this.writeRight = new Ui.DualIcon({ icon: 'pen', fill: '#f1f1f1', width: 20, height: 20 });
 		hbox.append(this.writeRight);
-		lbox.append(hbox);
+		this.getIconBox().append(hbox);
 
-		this.label = new Ui.CompactLabel({ text: 'Tout le monde', fontSize: 14, width: 80, maxLine: 2, textAlign: 'center', color: '#67696c', horizontalAlign: 'center' });
-		vbox.append(this.label);
+		this.setText('Tout le monde');
 	},
 
 	getUser: function() {
@@ -302,7 +288,7 @@ Wn.ResourceRight.extend('Wn.ResourceWorldRight', {
 	}
 });
 
-Ui.Pressable.extend('Wn.ResourceContactAdd', {
+Wn.ListAddButton.extend('Wn.ResourceContactAdd', {
 	user: undefined,
 	resource: undefined,
 
@@ -311,9 +297,6 @@ Ui.Pressable.extend('Wn.ResourceContactAdd', {
 		delete(config.resource);
 		this.user = config.user;
 		delete(config.user);
-
-		this.setContent(new Ui.Icon({ icon: 'plus', width: 48, height: 48, fill: '#444444', horizontalAlign: 'center', verticalAlign: 'center' }));
-
 		this.connect(this, 'press', this.onAddPress);
 	},
 
@@ -360,7 +343,7 @@ Wn.OptionSection.extend('Wn.ResourceSharesSection', {
 	},
 
 	onResourceChange: function() {
-		while(this.flow.getFirstChild() != undefined)
+		while(this.flow.getFirstChild() !== undefined)
 			this.flow.remove(this.flow.getFirstChild());
 
 		// public rights
@@ -380,7 +363,10 @@ Wn.OptionSection.extend('Wn.ResourceSharesSection', {
 			this.flow.append(icon);
 		}
 		if(this.resource.canShare()) {
-			var addIcon = new Wn.ResourceContactAdd({ resource: this.resource, user: this.user });
+			var addIcon = new Wn.ResourceContactAdd({
+				resource: this.resource, user: this.user,
+				verticalAlign: 'center', horizontalAlign: 'center'
+			});
 			this.flow.append(addIcon);
 		}
 	},

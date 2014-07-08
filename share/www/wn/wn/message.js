@@ -77,8 +77,10 @@ Core.Object.extend('Wn.Message', {
 	},
 
 	markSeen: function() {
-		var request = new Core.HttpRequest({ method: 'PUT', url: '/cloud/message/'+this['message'].id });
-		request.send();
+		if(!this.getSeen()) {
+			var request = new Core.HttpRequest({ method: 'PUT', url: '/cloud/message/'+this['message'].id });
+			request.send();
+		}
 	},
 
 	onGetMessageError: function(request) {

@@ -29,6 +29,21 @@ Core.Object.extend('Wn.Contact', {
 			throw('Wn.Contact id not set');
 	},
 
+	getName: function() {	
+		if(!this.getIsReady())
+			return '';
+		else if((this.getData().firstname === null) && (this.getData().lastname === null) && (this.getData().login === null))
+			return '';
+		else if((this.getData().firstname === null) && (this.getData().lastname === null))
+			return this.getData().login;
+		else if(this.getData().firstname === null)
+			return this.getData().lastname;
+		else if(this.getData().lastname === null)
+			return this.getData().firstname; 
+		else
+			return this.getData().firstname+' '+this.getData().lastname;
+	},
+
 	getIsReady: function() {
 		return this.ready;
 	},

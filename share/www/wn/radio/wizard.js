@@ -7,15 +7,11 @@ Wn.WizardItem.extend('Radio.Wizard', {
 		var vbox = new Ui.VBox({ spacing: 10 });
 		this.setContent(vbox);
 
-		vbox.append(new Ui.Label({ text: 'Nom de la ressource:', horizontalAlign: 'left' }));
-
-		this.nameField = new Ui.TextField({ marginLeft: 20 });
+		this.nameField = new Wn.TextField({ title: 'Nom de la ressource' });
 		this.connect(this.nameField, 'change', this.onChange);
 		vbox.append(this.nameField);
 
-		vbox.append(new Ui.Label({ text: 'URL du flux MP3:', horizontalAlign: 'left' }));
-
-		this.urlField = new Ui.TextField({ marginLeft: 20 });
+		this.urlField = new Wn.TextField({ title: 'URL du flux MP3' });
 		this.connect(this.urlField, 'change', this.onChange);
 		vbox.append(this.urlField);
 

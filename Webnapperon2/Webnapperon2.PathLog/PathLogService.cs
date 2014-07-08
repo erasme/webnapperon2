@@ -246,12 +246,14 @@ namespace Webnapperon2.PathLog
 			else if((context.Request.Method == "GET") && (parts.Length == 0)) {
 				int limit = 20000;
 				if(context.Request.QueryString.ContainsKey("limit"))
-					limit = Math.Min(20000, Math.Max(0, Convert.ToInt32(context.Request.QueryString["limit"])));
+					limit = Math.Max(0, Convert.ToInt32(context.Request.QueryString["limit"]));
 
 				JsonArray res = new JsonArray();
 
 				if(context.Request.QueryString.ContainsKey("user")) {
 					Rights.EnsureCanReadLog(context, context.Request.QueryString["user"]);
+					if(limit > 20000)
+						limit = 20000;
 					res = GetUserLogs(context.Request.QueryString["user"], limit);
 				}
 				else {
