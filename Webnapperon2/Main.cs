@@ -32,7 +32,7 @@ namespace Webnapperon2
 
 			// load the default setup from an embended resource
 			dynamic setup;
-			using(Stream stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("Webnapperon2.webnapperon2.setup")) {
+			using(Stream stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("Webnapperon2.webnapperon2.conf")) {
 				setup = ReadCommentedJson(stream);
 			}
 
