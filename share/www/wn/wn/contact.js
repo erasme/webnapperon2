@@ -3,6 +3,7 @@ Core.Object.extend('Wn.Contact', {
 	id: undefined,
 	data: undefined,
 	ready: false,
+	resourcesReady: false,
 	request: undefined,
 	resources: undefined,
 	user: undefined,
@@ -61,6 +62,10 @@ Core.Object.extend('Wn.Contact', {
 		return this.data.online;
 	},
 
+	getIsResourcesLoaded: function() {
+		return this.resourcesReady;
+	},
+
 	getFirstname: function() {
 		return this.data.firstname;
 	},
@@ -75,39 +80,42 @@ Core.Object.extend('Wn.Contact', {
 		// we abort the previous request.
 		if(this.request !== undefined)
 			return;
-		this.request = new Core.HttpRequest({ url: '/cloud/user/'+this.id+'?seenby='+this.user.getId() });
+		this.request = new Core.HttpRequest({ url: '/cloud/user/'+this.id+'?seenBy='+this.user.getId() });
 		this.connect(this.request, 'done', this.onGetDataDone);
 		this.connect(this.request, 'error', this.onGetDataError);
 		this.request.send();
 	},
 
 	updateData: function(data) {
-		// update resources
-		var newResources = [];
-		for(var i = 0; i < this.resources.length; i++)
-			delete(this.resources[i].wnContactSeen);
-		
-		for(var i = 0; i < data.resources.length; i++) {
-			var foundResource = undefined;
-			for(var i2 = 0; (foundResource === undefined) && (i2 < this.resources.length); i2++) {
-				if(this.resources[i2].getId() === data.resources[i].id)
-					foundResource = this.resources[i2];
+		// update if resources are known
+		if(data.resources !== undefined) {
+			this.resourcesReady = true;
+			var newResources = [];
+			for(var i = 0; i < this.resources.length; i++)
+				delete(this.resources[i].wnContactSeen);
+
+			for(var i = 0; i < data.resources.length; i++) {
+				var foundResource = undefined;
+				for(var i2 = 0; (foundResource === undefined) && (i2 < this.resources.length); i2++) {
+					if(this.resources[i2].getId() === data.resources[i].id)
+						foundResource = this.resources[i2];
+				}
+				if(foundResource !== undefined)
+					foundResource.updateData(data.resources[i]);
+				else {
+					foundResource = new Wn.Resource({ resource: data.resources[i], user: this.user });
+					this.connect(foundResource, 'change', this.onResourceChange);
+				}
+				foundResource.wnContactSeen = true;
+				newResources.push(foundResource);
 			}
-			if(foundResource !== undefined)
-				foundResource.updateData(data.resources[i]);
-			else {
-				foundResource = new Wn.Resource({ resource: data.resources[i], user: this.user });
-				this.connect(foundResource, 'change', this.onResourceChange);
+			for(var i = 0; i < this.resources.length; i++) {
+				if(this.resources[i].wnContactSeen !== true) {
+					this.disconnect(this.resources[i], 'change', this.onResourceChange);
+				}
 			}
-			foundResource.wnContactSeen = true;
-			newResources.push(foundResource);
+			this.resources = newResources;
 		}
-		for(var i = 0; i < this.resources.length; i++) {
-			if(this.resources[i].wnContactSeen !== true) {
-				this.disconnect(this.resources[i], 'change', this.onResourceChange);
-			}
-		}
-		this.resources = newResources;
 
 		this.data = data;
 		if(!this.ready) {
