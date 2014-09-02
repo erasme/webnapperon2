@@ -32,6 +32,7 @@ using System.IO;
 using System.Text;
 using System.Data;
 using System.Threading.Tasks;
+using System.Diagnostics;
 using Erasme.Http;
 using Erasme.Json;
 
@@ -40,12 +41,35 @@ namespace Webnapperon2.Wallpaper
 	public class WallpaperService: IHttpHandler
 	{
 		string basepath;
+		string thumbnailPath;
 		double cacheDuration;
 
-		public WallpaperService(string basepath, double cacheDuration)
+		public WallpaperService(string basepath, string thumbnailPath, double cacheDuration)
 		{
 			this.basepath = Path.GetFullPath(basepath);
+			this.thumbnailPath = Path.GetFullPath(thumbnailPath);
 			this.cacheDuration = cacheDuration;
+			// create the thumbnails directory
+			if(!Directory.Exists(this.thumbnailPath))
+				Directory.CreateDirectory(this.thumbnailPath);
+			// remove old thumbnails
+			foreach(string filePath in Directory.EnumerateFiles(this.thumbnailPath))
+				File.Delete(filePath);
+			// generate thumbnails
+			foreach(string file in Directory.EnumerateFiles(this.basepath)) {
+				string shortName = file.Substring(this.basepath.Length);
+				GenerateThumbnail(file, this.thumbnailPath + "/" + shortName);
+			}
+		}
+
+		public void GenerateThumbnail(string source, string dest) 
+		{
+			ProcessStartInfo startInfo = new ProcessStartInfo("/usr/bin/convert", source+" -auto-orient -strip -set option:distort:viewport \"%[fx:min(w,h)]x%[fx:min(w,h)]+%[fx:max((w-h)/2,0)]+%[fx:max((h-w)/2,0)]\" -distort SRT 0 +repage -resize 64x64 png:"+dest);
+			Process process = new Process();
+			process.StartInfo = startInfo;
+			process.Start();
+			process.WaitForExit();
+			process.Dispose();
 		}
 
 		JsonArray ListWallpapers()
@@ -69,7 +93,7 @@ namespace Webnapperon2.Wallpaper
 				context.Response.Content = new JsonContent(list);
 			}
 			else if((context.Request.Method == "GET") && (parts.Length == 1)) {
-				string fullPath = Path.GetFullPath(basepath+"/"+parts[0]);
+				string fullPath = Path.GetFullPath(basepath + "/" + parts[0]);
 
 				// check if full path is in the base directory
 				if(!fullPath.StartsWith(basepath)) {
@@ -81,7 +105,23 @@ namespace Webnapperon2.Wallpaper
 					if(!context.Request.QueryString.ContainsKey("nocache"))
 						context.Response.Headers["cache-control"] = "max-age=" + cacheDuration;
 					context.Response.SupportRanges = true;
-					context.Response.Content = new FileContent(basepath + parts[0]);
+					context.Response.Content = new FileContent(fullPath);
+				}
+			}
+			else if((context.Request.Method == "GET") && (parts.Length == 2) && (parts[0] == "thumbnail")) {
+				string fullPath = Path.GetFullPath(thumbnailPath + "/" + parts[1]);
+
+				// check if full path is in the base directory
+				if(!fullPath.StartsWith(thumbnailPath)) {
+					context.Response.StatusCode = 403;
+					context.Response.Content = new StringContent("Invalid thumbnail file path\r\n");
+				}
+				else if(File.Exists(fullPath)) {
+					context.Response.StatusCode = 200;
+					if(!context.Request.QueryString.ContainsKey("nocache"))
+						context.Response.Headers["cache-control"] = "max-age=" + cacheDuration;
+					context.Response.SupportRanges = true;
+					context.Response.Content = new FileContent(fullPath);
 				}
 			}
 			return Task.FromResult<object>(null);
