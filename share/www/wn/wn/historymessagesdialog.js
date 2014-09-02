@@ -5,6 +5,82 @@ Wn.UserMessageView.extend('Wn.UserNotifyView', {
 	}
 });
 
+Ui.ScrollLoader.extend('Wn.MessagesLoader', {
+	user: undefined,
+	dialog: undefined,
+	data: undefined,
+	filteredData: undefined,
+
+	constructor: function(config) {
+		this.user = config.user;
+		delete(config.user);
+
+		this.dialog = config.dialog;
+		delete(config.dialog);
+
+		this.data = config.data;
+		delete(config.data);
+
+		this.filteredData = this.data;
+	},
+
+	testFilter: function(words, text) {
+		var match = true;
+		for(var i = 0; match && (i < words.length); i++) {
+			match = (text.indexOf(words[i]) !== -1);
+		}
+		return match;
+	},
+	
+	setFilter: function(filter) {
+		var words;
+		if((filter !== undefined) && (filter !== '')) {
+			words = filter.split(" ");
+			for(var i = 0; i < words.length; i++) {
+				words[i] = words[i].toLowerCase().toNoDiacritics();
+			}
+		}
+		this.filteredData = [];
+		for(var i = 0; i < this.data.length; i++) {
+			var item = this.data[i];
+			if(words === undefined)
+				this.filteredData.push(item);
+			else {
+				if(this.testFilter(words, item.getSearchText()))
+					this.filteredData.push(item);
+			}
+		}
+		this.fireEvent('change');
+	}
+}, {
+	getMin: function() {
+		return 0;
+	},
+
+	getMax: function() {
+		return this.filteredData.length-1;
+	},
+
+	getElementAt: function(position) {
+		if(position > this.filteredData.length -1)
+			return;
+		var view;
+		if(this.filteredData[position].getOrigin() === this.user.getId()) {
+			view = new Wn.UserMessageView({
+				user: this.user, message: this.filteredData[position], dialog: this.dialog,
+				showSource: false, marginBottom: 20
+			});
+		}
+		else {
+			view = new Wn.UserMessageView({
+				user: this.user, message: this.filteredData[position], dialog: this.dialog,
+				showDestination: false, marginBottom: 20
+			});
+		}
+		return view;
+	}
+});
+
 Ui.VBox.extend('Wn.HistoryMessages', {
 	user: undefined,
 	limit: 250,
@@ -79,7 +155,9 @@ Ui.VBox.extend('Wn.HistoryMessages', {
 		this.messagesRequest = undefined;
 		if(!this.isReady) {
 			this.isReady = true;
-			this.fireEvent('ready');
+			new Core.DelayedTask({ delay: 0.1, scope: this, callback: function() {
+				this.fireEvent('ready');
+			}});
 		}
 	},
 	
@@ -185,6 +263,7 @@ Ui.VBox.extend('Wn.HistoryMessages', {
 
 Ui.Dialog.extend('Wn.HistoryMessagesDialog', {
 	messagesView: undefined,
+	messagesLoader: undefined,
 
 	constructor: function(config) {
 		this.user = config.user;
@@ -192,7 +271,7 @@ Ui.Dialog.extend('Wn.HistoryMessagesDialog', {
 
 		this.setPreferredWidth(600);
 		this.setPreferredHeight(600);
-		this.setFullScrolling(true);
+//		this.setFullScrolling(true);
 		this.setTitle('Historique des messages');
 		this.setCancelButton(new Ui.DialogCloseButton());
 
@@ -201,14 +280,34 @@ Ui.Dialog.extend('Wn.HistoryMessagesDialog', {
 		Ui.Box.setResizable(searchField, true);
 		this.setActionButtons([ searchField ]);
 
-		this.messagesView = new Wn.HistoryMessages({ user: this.user, limit: 400, spacing: 20 });
-		this.connect(this.messagesView, 'ready', function() {
-			this.setContent(this.messagesView);
+		// TODO
+		var request = new Core.HttpRequest({ url: '/cloud/message?limit=5000&user='+this.user.getId() });
+		this.connect(request, 'done', function(req) {
+			var json = req.getResponseJSON();
+			var messages = [];
+			for(var i = 0; i < json.length; i++) {
+				var message = new Wn.Message({ message: json[i] });
+				if(message.getType() == 'comment')
+					continue;
+				messages.push(message);
+			}
+
+			this.messagesLoader = new Wn.MessagesLoader({ user: this.user, dialog: this, data: messages });
+			var scroll = new Ui.VBoxScrollingArea({ loader: this.messagesLoader });
+			this.setContent(scroll);
 		});
+		request.send();
+
+//		this.messagesView = new Wn.HistoryMessages({ user: this.user, limit: 400, spacing: 20 });
+//		this.connect(this.messagesView, 'ready', function() {
+//			this.setContent(this.messagesView);
+//		});
 	},
 
 	onSearchValidate: function(searchField, value) {
-		this.messagesView.setFilter(value);
+		if(this.messagesLoader !== undefined)
+			this.messagesLoader.setFilter(value);
+//		this.messagesView.setFilter(value);
 	}
 });
 	
