@@ -122,9 +122,17 @@ Core.Object.extend('Wn.User', {
 	},
 
 	watchResource: function(resource) {
+		this.watchedContact = undefined;
 		this.watchedResource = resource;
 		if(this.userSocketAlive)
 			this.userSocket.send(JSON.stringify({ type: 'watch', resource: this.watchedResource.getId() }));
+	},
+
+	watchContact: function(contact) {
+		this.watchedResource = undefined;
+		this.watchedContact = contact;
+		if(this.userSocketAlive)
+			this.userSocket.send(JSON.stringify({ type: 'watch', resource: this.watchedContact.getId() }));
 	},
 
 	getResource: function(id) {
@@ -319,10 +327,15 @@ Core.Object.extend('Wn.User', {
   	},
 
   	getWallpaper: function() {
-  		if((this.user.data !== null) && (this.user.data !== undefined) && (this.user.data.wallpaper !== undefined))
+  		if((this.user.data !== null) && (this.user.data !== undefined) && (this.user.data.wallpaper !== undefined) && (this.user.data.wallpaper !== null))
   			return this.user.data.wallpaper;
-  		else
-  			return "default.jpeg";
+  		else {
+			var wallpaper = Ui.App.current.getThemeWallpaper(this.getTheme());
+			if(wallpaper !== undefined)
+				return wallpaper;
+			else
+  				return "default.jpeg";
+  		}
 	},
 
 	setWallpaper: function(wallpaper) {
@@ -426,19 +439,26 @@ Core.Object.extend('Wn.User', {
 			}
 			// a contact user changed
 			else {
-				var contact = Wn.Contact.getContact(msg.user, true);
-				if(contact !== undefined)
-					contact.update();
+				if((this.watchedContact !== null) && (this.watchedContact !== undefined) &&
+			   	   (this.watchedContact.getId() === msg.user))
+			   		this.watchedContact.update();
+			   	else {
+					var contact = Wn.Contact.getContact(msg.user, true);
+					if(contact !== undefined)
+						contact.update();
+				}
 			}
 		}
 		else if(msg.event === 'resourcechanged') {
-			// a known ressource changed
-			var resource = Wn.Resource.getResource(msg.resource, this, true);
-			if(resource !== undefined)
-				resource.update();
 			if((this.watchedResource !== null) && (this.watchedResource !== undefined) &&
-			   (resource !== this.watchedResource) && (this.watchedResource.getId() === msg.resource))
+			   (this.watchedResource.getId() === msg.resource))
 			   this.watchedResource.update();
+			else {
+				// a known ressource changed
+				var resource = Wn.Resource.getResource(msg.resource, this, true);
+				if(resource !== undefined)
+					resource.update();
+			}
 		}
 		else if(msg.event === 'userdisconnected') {
 			// a known user has disconnected
