@@ -43,7 +43,7 @@ Ui.Transformable.extend('Storage.TransformableContent', {
 
 Ui.ScrollingArea.extend('Storage.Transformable', {
 	constructor: function(config) {
-		this.contentBox.setMaxScale(4);
+		this.setMaxScale(4);
 	}
 });
 
