@@ -4,15 +4,25 @@
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ItemType>GenericProject</ItemType>
-    <ProductVersion>10.0.0</ProductVersion>
+    <ProductVersion>8.0.30703</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{EA15FA9D-9ACF-4B67-ABCA-47CA6F84058D}</ProjectGuid>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <OutputPath>.</OutputPath>
+    <CustomCommands>
+      <CustomCommands>
+        <Command type="Build" command="make" workingdir="${ProjectDir}" />
+      </CustomCommands>
+    </CustomCommands>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <OutputPath>.</OutputPath>
+    <CustomCommands>
+      <CustomCommands>
+        <Command type="Build" command="make" workingdir="${ProjectDir}" />
+      </CustomCommands>
+    </CustomCommands>
   </PropertyGroup>
   <ItemGroup>
     <Folder Include="user\" />
@@ -54,10 +64,6 @@
     <None Include="www\era\excanvas\README" />
     <None Include="www\era\excanvas\excanvas.compiled.js" />
     <None Include="www\era\excanvas\excanvas.js" />
-    <None Include="www\era\form\field.js" />
-    <None Include="www\era\form\fieldcontainer.js" />
-    <None Include="www\era\form\panel.js" />
-    <None Include="www\era\form\panelcontainer.js" />
     <None Include="www\era\ui\accordeon.js" />
     <None Include="www\era\ui\accordeonable.js" />
     <None Include="www\era\ui\app.js" />
@@ -80,7 +86,6 @@
     <None Include="www\era\ui\draggable.js" />
     <None Include="www\era\ui\dropbox.js" />
     <None Include="www\era\ui\element.js" />
-    <None Include="www\era\ui\embed.js" />
     <None Include="www\era\ui\entry.js" />
     <None Include="www\era\ui\fade.js" />
     <None Include="www\era\ui\fixed.js" />
@@ -227,13 +232,11 @@
     <None Include="www\wn\wn\hdropbox.js" />
     <None Include="www\wn\wn\userstatsdialog.js" />
     <None Include="www\wn\wn\resourceviewgraphic.js" />
-    <None Include="www\wn\wn\carousel.js" />
     <None Include="www\era\ui\textbggraphic.js" />
     <None Include="www\era\ui\movablebase.js" />
     <None Include="www\era\ui\checkboxgraphic.js" />
     <None Include="www\wn\wn\contentbggraphic.js" />
     <None Include="www\wn\wn\scaledimage2.js" />
-    <None Include="www\era\form\dialog.js" />
     <None Include="www\wn\wn\optionsection.js" />
     <None Include="www\wn\wn\rfid.js" />
     <None Include="www\wn\wn\resourcepropertiesdialog.js" />
@@ -283,20 +286,12 @@
     <None Include="www\era\ui\overable.js" />
     <None Include="www\img\login_logo.png" />
     <None Include="www\era\ui\dualicon.js" />
+    <None Include="www\era\ui\event.js" />
+    <None Include="www\era\ui\wheelevent.js" />
+    <None Include="www\era\ui\pointerevent.js" />
+    <None Include="www\era\ui\dragevent.js" />
+    <None Include="www\era\ui\carouselable3.js" />
+    <None Include="www\era\ui\carousel3.js" />
+    <None Include="www\era\ui\vboxscrollable.js" />
   </ItemGroup>
-  <ProjectExtensions>
-    <MonoDevelop>
-      <Properties>
-        <MonoDevelop.Autotools.MakefileInfo IntegrationEnabled="True" RelativeMakefileName="Makefile">
-          <BuildFilesVar />
-          <DeployFilesVar />
-          <ResourcesVar />
-          <OthersVar />
-          <GacRefVar />
-          <AsmRefVar />
-          <ProjectRefVar />
-        </MonoDevelop.Autotools.MakefileInfo>
-      </Properties>
-    </MonoDevelop>
-  </ProjectExtensions>
 </Project>
