@@ -290,8 +290,9 @@ Ui.ScrollingArea.extend('Storage.FileViewer', {
 			this.connect(this.contentViewer, 'end', this.onPlayEnd);
 			this.contentViewer.play();
 		}
-		else
+		else {
 			this.timer = new Core.DelayedTask({ scope: this, delay: 5, callback: this.onPlayEnd });
+		}
 	},
 	
 	current: function() {
@@ -517,8 +518,8 @@ Ui.LBox.extend('Storage.SiteFileViewer', {
 
 		var lbox = new Ui.LBox({ verticalAlign: 'bottom', horizontalAlign: 'center' });
 		vbox.append(lbox);
-		lbox.append(new Ui.Rectangle({ fill: new Ui.Color({ r: 0.7, b: 0.7, g: 0.7 }), radius: 2 }));
-		lbox.append(new Ui.Rectangle({ fill: 'white', margin: 1, radius: 2 }));
+//		lbox.append(new Ui.Rectangle({ fill: new Ui.Color({ r: 0.7, b: 0.7, g: 0.7 }), radius: 2 }));
+//		lbox.append(new Ui.Rectangle({ fill: 'white', margin: 1, radius: 2 }));
 		var image = new Ui.Image({ src: '/cloud/previewhigh/'+this.storage+'/'+this.file.id+'?rev='+this.file.rev, width: 128, margin: 3 });
 		lbox.append(image);
 		this.connect(image, 'error', function() {
@@ -1002,7 +1003,149 @@ Ui.LBox.extend('Storage.PdfPage', {
 	}
 });
 
-Storage.Transformable.extend('Storage.PdfFileViewer', {
+Ui.ScrollLoader.extend('Storage.PdfPageLoader', {
+	storage: undefined,
+	file: undefined,
+	data: undefined,
+
+	constructor: function(config) {
+		this.storage = config.storage;
+		delete(config.storage);
+
+		this.file = config.file;
+		delete(config.file);
+
+		this.data = config.data;
+		delete(config.data);
+	}
+}, {
+	getMin: function() {
+		return 0;
+	},
+
+	getMax: function() {
+		return this.data.length-1;
+	},
+
+	getElementAt: function(position) {
+		return new Storage.PdfPage({
+			storage: this.storage, file: this.file, page: position,
+			ratio: this.data[position].width/this.data[position].height,
+			marginBottom: 20
+		});
+	}
+});
+
+Ui.LBox.extend('Storage.PdfFileViewer', {
+	storage: undefined,
+	file: undefined,
+	fileViewer: undefined,
+	pages: undefined,
+	data: undefined,
+	isCurrent: false,
+//	scroll: undefined,
+	checkTask: undefined,
+	request: undefined,
+	relativeOffset: 0,
+
+	constructor: function(config) {	
+		this.storage = config.storage;
+		delete(config.storage);
+		this.file = config.file;
+		delete(config.file);
+		this.fileViewer = config.fileViewer;
+		delete(config.fileViewer);
+
+		//console.log(this+' new');
+
+		this.setContent(new Ui.Element());
+	},
+	
+	checkReady: function() {
+		if(this.checkTask !== undefined)
+			this.checkTask = undefined;
+		if(this.request !== undefined)
+			return;
+		this.request = new Core.HttpRequest({ method: 'GET', url: '/cloud/pdf/'+this.storage+'/'+this.file.id });
+		this.connect(this.request, 'done', this.onCheckDone);
+		this.connect(this.request, 'error', this.onCheckError);
+		this.request.send();
+	},
+	
+	onCheckDone: function() {
+		var json = this.request.getResponseJSON();
+		//console.log(this+'.onCheckDone '+json.status);
+
+		if(json.status == 'ready') {
+			this.data = json;
+			//this.scroll = new Ui.ScrollingArea({ scrollHorizontal: false, scrollVertical: true });
+			//this.setContent(this.scroll);
+
+//			this.pages = new Ui.VBox({ spacing: 10 });
+			//this.scroll.setContent(this.pages);
+//			this.setContent(this.pages);
+			this.onDataDone();
+		}
+		else if(json.status == 'building') {
+			this.checkTask = new Core.DelayedTask({ delay: 2, scope: this, callback: this.checkReady });
+		}
+		else {
+			this.setContent(new Ui.Text({ text: 'Impossible de lire ce fichier PDF', verticalAlign: 'center' }));
+		}
+		this.request = undefined;
+	},
+	
+	onCheckError: function() {
+		this.setContent(new Ui.Text({ text: 'Impossible de lire ce fichier vidéo', verticalAlign: 'center' }));
+		this.request = undefined;
+	},
+	
+	onDataDone: function(req) {
+		var loader = new Storage.PdfPageLoader({ storage: this.storage, file: this.file, data: this.data.pages });
+		this.pages = new Ui.VBoxScrollingArea({ loader: loader, maxScale: 4 });
+		this.setContent(this.pages);
+
+/*		for(var i = 0; i < this.data.pages.length; i++) {
+			var page =  new Storage.PdfPage({
+				storage: this.storage, file: this.file, page: i,
+				ratio: this.data.pages[i].width/this.data.pages[i].height
+			});
+			this.pages.append(page);
+		}*/
+	},
+
+	current: function() {
+		this.isCurrent = true;
+	},
+	
+	uncurrent: function() {
+		this.isCurrent = false;
+	}
+}, {
+	onVisible: function() {
+		if(this.pages === undefined) {
+			var vbox = new Ui.VBox({ verticalAlign: 'center', spacing: 10 });
+			vbox.append(new Ui.Loading({ width: 50, height: 50, horizontalAlign: 'center' }));
+			vbox.append(new Ui.Text({ text: 'Encodage en cours... Veuillez patienter', textAlign: 'center' }));
+			this.setContent(vbox);		
+
+			this.checkReady();
+		}
+	},
+
+	onHidden: function() {
+		if(this.request != undefined) {
+			this.request.abort();
+			this.request = undefined;
+		}
+		if(this.checkTask != undefined) {
+			this.checkTask.abort();
+			this.checkTask = undefined;
+		}
+	}
+});
+
+/*Storage.Transformable.extend('Storage.PdfFileViewer', {
 	storage: undefined,
 	file: undefined,
 	fileViewer: undefined,
@@ -1084,7 +1227,7 @@ Storage.Transformable.extend('Storage.PdfFileViewer', {
 		this.isCurrent = false;
 	}
 }, {
-/*	arrangeCore: function(w, h) {
+*//*	arrangeCore: function(w, h) {
 		var ry = 0;
 		if(this.scroll !== undefined)
 			ry = this.scroll.getRelativeOffsetY(); 
@@ -1094,7 +1237,7 @@ Storage.Transformable.extend('Storage.PdfFileViewer', {
 			// scroll to stay at the same relative offset
 			this.scroll.setOffset(undefined, ry);
 		}
-	},*/
+	},*//*
 
 	onVisible: function() {
 		if(this.pages === undefined) {
@@ -1117,7 +1260,7 @@ Storage.Transformable.extend('Storage.PdfFileViewer', {
 			this.checkTask = undefined;
 		}
 	}
-});
+});*/
 	
 Ui.LBox.extend('Storage.GenericFileViewer', {
 	storage: undefined,
@@ -1309,6 +1452,94 @@ Ui.Button.extend('Storage.UploadView', {
 	}
 });
 
+
+Ui.CarouselableLoader.extend('Storage.FileDataLoader', {
+	viewer: undefined,
+	storage: undefined,
+	files: undefined,
+	isDetailsVisible: true,
+
+
+	constructor: function(config) {
+		this.viewer = config.viewer;
+		delete(config.viewer);
+
+		this.storage = config.storage;
+		delete(config.storage);
+
+		this.files = [];
+	},
+
+	setFiles: function(files) {
+		if(files === undefined)
+			this.files = [];
+		else
+			this.files = files;
+	},
+
+	setShowDetails: function(isDetailsVisible) {
+		this.isDetailsVisible = isDetailsVisible;
+	}
+
+}, {
+	getMin: function() {
+		if(this.viewer.canAddFile() || (this.files.length === 0))
+			return -1;
+		else
+			return 0;
+	},
+
+	getMax: function() {
+		return this.files.length - 1;
+	},
+	
+	getElementAt: function(position) {
+		if(position === -1) {
+			if(this.viewer.canAddFile()) {
+				var uploadView = new Storage.UploadView({
+					resource: this.viewer.getResource(), verticalAlign: 'center', horizontalAlign: 'center',
+					width: 300, height: 300
+				});
+				this.connect(uploadView, 'press', function() {
+					var dialog = new Storage.NewDialog({ viewer: this.viewer });
+					dialog.open();
+				});
+				return uploadView;
+			}
+			else {
+				return new Ui.Text({
+					fontSize: 20, text: 'Il n\'y a pas encore de fichier. Revenez plus tard.',
+					textAlign: 'center', verticalAlign: 'center', margin: 20, interLine: 1.4
+				});
+			}
+		}
+		else {
+			return new Storage.FileViewer({
+				storage: this.storage, file: this.files[position], viewer: this.viewer,
+				showDetails: this.isDetailsVisible
+			});
+		}
+	}
+});
+
+Ui.CarouselableLoader.extend('Storage.LoadingDataLoader', {}, {
+	getMin: function() {
+		return -1;
+	},
+
+	getMax: function() {
+		return -1;
+	},
+	
+	getElementAt: function(position) {
+		return new Ui.Text({
+			fontSize: 20, text: 'Chargement en cours...',
+			textAlign: 'center', verticalAlign: 'center', margin: 20, interLine: 1.4
+		});
+	}
+});
+
+
 Wn.ResourceViewer.extend('Storage.BaseViewer', {
 	storage: undefined,
 	navigation: undefined,
@@ -1327,6 +1558,7 @@ Wn.ResourceViewer.extend('Storage.BaseViewer', {
 	resourceRev: 0,
 	isDetailsVisible: true,
 	uploadView: undefined,
+	loader: undefined,
 
 	constructor: function(config) {
 		this.mainVbox = new Ui.VBox();
@@ -1344,9 +1576,14 @@ Wn.ResourceViewer.extend('Storage.BaseViewer', {
 
 		this.setContent(this.mainVbox);
 
-		this.carousel = new Ui.Carousel({ bufferingSize: 1 });
+		this.loader = new Storage.LoadingDataLoader();
+		this.carousel = new Ui.Carousel3({ loader: this.loader, bufferingSize: 1 });
 		this.mainVbox.prepend(this.carousel, true);
 		this.connect(this.carousel, 'change', this.onCarouselChange);
+
+//		this.carousel = new Ui.Carousel({ bufferingSize: 1 });
+//		this.mainVbox.prepend(this.carousel, true);
+//		this.connect(this.carousel, 'change', this.onCarouselChange);
 
 //		var thumbButton = new Ui.ToggleButton({ icon: 'thumb', text: 'Vignettes' });
 //		this.connect(thumbButton, 'toggle', this.onNavToggle);
@@ -1390,8 +1627,11 @@ Wn.ResourceViewer.extend('Storage.BaseViewer', {
 	},
 	
 	setAutoPlay: function(autoplay) {
-		if(this.autoplay !== autoplay)
+		if(this.autoplay !== autoplay) {
 			this.autoplay = autoplay;
+			if((this.current !== undefined) && this.autoplay)
+				this.current.play();
+		}
 	},
 			
 	onFileDropAt: function(hbox, mimetype, data, pos) {	
@@ -1418,8 +1658,8 @@ Wn.ResourceViewer.extend('Storage.BaseViewer', {
 					pos--;
 				this.flow.moveAt(found, pos);
 				// update the carousel too
-				var carouselItem = this.carousel.getLogicalChildren()[foundAt];
-				this.carousel.moveAt(carouselItem, pos);
+//				var carouselItem = this.carousel.getLogicalChildren()[foundAt];
+//				this.carousel.moveAt(carouselItem, pos);
 				// notify position change
 				var request = new Core.HttpRequest({
 					method: 'PUT', url: '/cloud/storage/'+storage+'/'+file,
@@ -1540,6 +1780,7 @@ Wn.ResourceViewer.extend('Storage.BaseViewer', {
 
 	showDetails: function() {
 		this.isDetailsVisible = true;
+		this.loader.setShowDetails(this.isDetailsVisible);
 		for(var i = 0; i < this.carousel.getLogicalChildren().length; i++)
 			if(Storage.FileViewer.hasInstance(this.carousel.getLogicalChildren()[i]))
 				this.carousel.getLogicalChildren()[i].showDetails();
@@ -1547,32 +1788,27 @@ Wn.ResourceViewer.extend('Storage.BaseViewer', {
 
 	hideDetails: function() {
 		this.isDetailsVisible = false;
+		this.loader.setShowDetails(this.isDetailsVisible);
 		for(var i = 0; i < this.carousel.getLogicalChildren().length; i++)
 			if(Storage.FileViewer.hasInstance(this.carousel.getLogicalChildren()[i]))
 				this.carousel.getLogicalChildren()[i].hideDetails();
 	},
 
 	onCarouselChange: function(carousel, pos) {
-
-		if(carousel.getLogicalChildren().length == 0)
-			return;
-	
-		//console.log('onCarouselChange pos: '+pos+', length: '+carousel.getLogicalChildren().length+' ,firstUpdate: '+this.firstUpdate);
-		
+			
 		if((this.current !== undefined) && Storage.FileViewer.hasInstance(this.current)){
 			this.current.uncurrent();
 			this.disconnect(this.current, 'end', this.onCurrentEnd);
 		}
 		
-		var current = this.carousel.getLogicalChildren()[pos];
+		var current = this.carousel.getCurrent();
 
 		if((current !== undefined) && Storage.FileViewer.hasInstance(current)) {
 			current.current();
 			// change the tools box
 			if(current.getFile() !== undefined) {
-				this.path = this.carousel.getLogicalChildren()[pos].getFile().id;
-				Ui.App.current.notifyMainPath('resource:'+this.getResource().getId()+':'+this.carousel.getLogicalChildren()[pos].getFile().id);
-
+				this.path = current.getFile().id;
+				Ui.App.current.notifyMainPath('resource:'+this.getResource().getId()+':'+current.getFile().id);
 			}
 			this.connect(current, 'end', this.onCurrentEnd);
 			if(this.autoplay)
@@ -1593,10 +1829,7 @@ Wn.ResourceViewer.extend('Storage.BaseViewer', {
 			for(var i = 0; i < this.flow.getLogicalChildren().length; i++) {
 				var preview = this.flow.getLogicalChildren()[i];
 				if((preview.getFile() !== undefined) && (preview.getFile().id == this.current.getFile().id)) {
-					if('scrollIntoViewIfNeeded' in preview.getDrawing())
-						preview.getDrawing().scrollIntoViewIfNeeded();
-					else
-						preview.getDrawing().scrollIntoView();
+					preview.scrollIntoView();
 					this.currentPreview = preview;
 					this.currentPreview.current();
 					break;
@@ -1610,7 +1843,7 @@ Wn.ResourceViewer.extend('Storage.BaseViewer', {
 	
 		if(this.navigation === undefined)
 			return;
-		// update the previews			
+		// update the previews
 		var remove = [];
 		for(var i = 0; i < this.flow.getLogicalChildren().length; i++) {
 			var child = this.flow.getLogicalChildren()[i];
@@ -1649,30 +1882,10 @@ Wn.ResourceViewer.extend('Storage.BaseViewer', {
 	},
 
 	onUpdateDone: function() {
+		//console.log(this+'.onUpdateDone');
+
 		var res = this.updateRequest.getResponseJSON();
 		this.storageRev = res.storage_rev;
-
-		if(this.firstUpdate && this.canAddFile()) {
-			this.uploadView = new Storage.UploadView({
-				resource: this.getResource(), verticalAlign: 'center', horizontalAlign: 'center',
-				width: 300, height: 300
-			});
-			this.connect(this.uploadView, 'press', function() {
-				var dialog = new Storage.NewDialog({ viewer: this });
-				dialog.open();
-			});
-			this.carousel.append(this.uploadView);
-		}
-
-		var carouselStart = (this.canAddFile()?1:0);
-		
-		var count = (res.children === undefined)?0:res.children.length;
-
-		if((count === 0) && !this.canAddFile())
-			this.carousel.setContent(new Ui.Text({
-				fontSize: 20, text: 'Il n\'y a pas encore de fichier. Revenez plus tard.',
-				textAlign: 'center', verticalAlign: 'center', margin: 20, interLine: 1.4
-			}));
 
 		// update the previews
 		this.updatePreviews(res.children);
@@ -1680,7 +1893,7 @@ Wn.ResourceViewer.extend('Storage.BaseViewer', {
 		//console.log(this+'.onUpdateDone '+carouselStart+', '+this.carousel.getLogicalChildren().length);
 
 		// update the viewers
-		var remove = [];
+/*		var remove = [];
 		for(var i = carouselStart; i < this.carousel.getLogicalChildren().length; i++) {
 			var child = this.carousel.getLogicalChildren()[i];
 			if(!('getFile' in child))
@@ -1728,8 +1941,14 @@ Wn.ResourceViewer.extend('Storage.BaseViewer', {
 			}
 			if(empty)
 				this.carousel.getLogicalChildren()[0].current();
-		}
-		this.files = res.children;
+		}*/
+		this.files = (res.children !== undefined) ? res.children: [];
+
+		this.loader = new Storage.FileDataLoader({
+			viewer: this, storage: this.storage, files: this.files,
+			showDetails: this.isDetailsVisible
+		});
+		this.carousel.setLoader(this.loader);
 		this.updateRequest = undefined;
 
 		if(this.firstUpdate) {
@@ -1737,17 +1956,33 @@ Wn.ResourceViewer.extend('Storage.BaseViewer', {
 			var path = this.getPath();
 			if(path !== undefined) {
 				// find the corresponding file and goto it
-				for(var i = carouselStart; i < this.carousel.getLogicalChildren().length; i++) {
-					if(this.carousel.getLogicalChildren()[i].getFile().id == path) {
+				for(var i = 0; i < this.files.length; i++) {
+					if(this.files[i].id == path) {
 						this.carousel.setCurrentAt(i, true);
 						break;
 					}
 				}
 			}
 			else
-				this.carousel.setCurrentAt(carouselStart, true);
+				this.carousel.setCurrentAt(0, true);
 		}
-		this.onCarouselChange(this.carousel, this.carousel.getCurrentPosition());
+		else {
+			var oldPosFound = false;
+			// try to stay on the current file
+			if((this.current !== undefined) && Storage.FileViewer.hasInstance(this.current)) {
+				if(this.current.getFile() !== undefined) {
+					for(var i = 0; i < this.files.length; i++) {
+						if(this.files[i].id === this.current.getFile().id) {
+							oldPosFound = true;
+							this.carousel.setCurrentAt(i, true);
+							break;
+						}
+					}
+				}
+			}
+			if(!oldPosFound)
+				this.onCarouselChange(this.carousel, this.carousel.getCurrentPosition());
+		}
 	},
 
 	onUpdateError: function() {
@@ -1763,16 +1998,9 @@ Wn.ResourceViewer.extend('Storage.BaseViewer', {
 	},
 
 	onPreviewPress: function(preview) {
-		//console.log(this+'.onPreviewPress');
-		for(var i = (this.getResource().canWrite()?1:0); i < this.carousel.getLogicalChildren().length; i++) {
-			if(((this.carousel.getLogicalChildren()[i].getFile() !== undefined) && (preview.getFile() !== undefined) &&
-			    (this.carousel.getLogicalChildren()[i].getFile().id === preview.getFile().id)) ||
-               ((this.carousel.getLogicalChildren()[i].getUploader() !== undefined) && (preview.getUploader() !== undefined) &&
-                (this.carousel.getLogicalChildren()[i].getUploader() === preview.getUploader()))) {
-				this.carousel.setCurrentAt(i);
-				break;
-			}
-		}
+		var i = 0;
+		for(; (i < this.files.length) && (this.files[i].id !== preview.getFile().id); i++) {}
+		this.carousel.setCurrentAt(i);
 	},
 
 	onKeyUp: function(event) {
@@ -1972,15 +2200,9 @@ Wn.ResourceViewer.extend('Storage.BaseViewer', {
 	},
 	
 	onCurrentEnd: function(item) {
-		//console.log(this+'.onCurrentEnd('+item.getFile().id+')');
 		this.disconnect(item, 'end', this.onCurrentEnd);
-
-		if(this.autoplay) {
-			if(this.carousel.getCurrentPosition() >= this.carousel.getLogicalChildren().length - 1)
-				this.setAutoPlay(false);
-			else
-				this.carousel.next();
-		}
+		if(this.autoplay)
+			this.carousel.next();
 	},
 	
 	onPropertiesPress: function() {
@@ -1989,19 +2211,6 @@ Wn.ResourceViewer.extend('Storage.BaseViewer', {
 	}
 
 }, {
-	fullscreen: function() {
-		//console.log(this+'.fullscreen current: '+this.current);
-		Storage.BaseViewer.base.fullscreen.apply(this, arguments);
-//		for(var i = 0; i < this.carousel.getLogicalChildren().length; i++)
-//			this.carousel.getLogicalChildren()[i].fullscreen();
-	},
-
-	unfullscreen: function() {
-		Storage.BaseViewer.base.unfullscreen.apply(this, arguments);
-//		for(var i = 0; i < this.carousel.getLogicalChildren().length; i++)
-//			this.carousel.getLogicalChildren()[i].unfullscreen();
-	},
-
 	onResourceChange: function() {
 		Storage.BaseViewer.base.onResourceChange.apply(this, arguments);
 		if((this.storage !== undefined) && (this.resourceRev !== this.getResource().getData().rev)) {
