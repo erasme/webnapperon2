@@ -454,15 +454,16 @@ namespace Migration
 					// create the user table
 					using(IDbCommand dbcmd = usersNewDbcon.CreateCommand()) {
 						dbcmd.CommandText = "CREATE TABLE user (id VARCHAR PRIMARY KEY, firstname VARCHAR, "+
-						                "lastname VARCHAR, description VARCHAR, email VARCHAR, login VARCHAR, password VARCHAR, "+
-						                "admin INTEGER(1) DEFAULT 0 NOT NULL, googleid VARCHAR DEFAULT NULL, "+
-						                "facebookid VARCHAR DEFAULT NULL, face_rev INTEGER DEFAULT 0,"+
-						                "email_notify_message_received INTEGER(1) DEFAULT 0, "+
-						                "email_notify_contact_added INTEGER(1) DEFAULT 0, "+
-						                "email_notify_resource_shared INTEGER(1) DEFAULT 0, "+
-						                "email_notify_comment_added INTEGER(1) DEFAULT 0, "+
-						                "create_date INTEGER, default_friend INTEGER(1) DEFAULT 0 NOT NULL,"+
-						                "default_share_right INTEGER(1) DEFAULT 0, default_write_right INTEGER(1) DEFAULT 0)";
+							"lastname VARCHAR, description VARCHAR, email VARCHAR, login VARCHAR, password VARCHAR, "+
+							"admin INTEGER(1) DEFAULT 0 NOT NULL, googleid VARCHAR DEFAULT NULL, "+
+							"facebookid VARCHAR DEFAULT NULL, face_rev INTEGER DEFAULT 0,"+
+							"email_notify_message_received INTEGER(1) DEFAULT 0, "+
+							"email_notify_contact_added INTEGER(1) DEFAULT 0, "+
+							"email_notify_resource_shared INTEGER(1) DEFAULT 0, "+
+							"email_notify_comment_added INTEGER(1) DEFAULT 0, "+
+							"create_date INTEGER, default_friend INTEGER(1) DEFAULT 0 NOT NULL,"+
+							"default_share_right INTEGER(1) DEFAULT 0, default_write_right INTEGER(1) DEFAULT 0,"+
+							" data VARCHAR DEFAULT NULL)";
 						dbcmd.ExecuteNonQuery();
 					}
 					// create the contact table
@@ -479,7 +480,8 @@ namespace Migration
 							"(id VARCHAR PRIMARY KEY, owner_id VARCHAR, "+
 							"type VARCHAR, name VARCHAR, data VARCHAR, public_read INTEGER(1) DEFAULT 0, "+
 							"public_write INTEGER(1) DEFAULT 0, public_share INTEGER(1) DEFAULT 0, "+
-							"ctime INTEGER, rev INTEGER DEFAULT 0, storage_id VARCHAR DEFAULT NULL)";
+							"ctime INTEGER, rev INTEGER DEFAULT 0, storage_id VARCHAR DEFAULT NULL, "+
+							"preview_file_id INTEGER DEFAULT NULL, preview_file_rev INTEGER DEFAULT NULL)";
 						dbcmd.ExecuteNonQuery();
 					}
 					// create the resource seen table
@@ -930,6 +932,66 @@ namespace Migration
 			}
 		}
 
+		/////////////////////////////////////////////////
+		// generate
+		/////////////////////////////////////////////////
+
+		public static void UpdateResourcesPreview()
+		{
+			Console.WriteLine("Update resource previews");
+
+			using(IDbConnection storageNewDbcon = (IDbConnection)new SqliteConnection("URI=file:storages.db")) {
+				storageNewDbcon.Open();
+
+				using(IDbConnection usersNewDbcon = (IDbConnection)new SqliteConnection("URI=file:users.db")) {
+					usersNewDbcon.Open();
+					// disable disk sync.
+					using(IDbCommand dbcmd = usersNewDbcon.CreateCommand()) {
+						dbcmd.CommandText = "PRAGMA synchronous=0";
+						dbcmd.ExecuteNonQuery();
+					}
+
+					// select all resources
+					using(IDbCommand dbcmd = usersNewDbcon.CreateCommand()) {
+
+						dbcmd.CommandText = "SELECT id,storage_id FROM resource WHERE storage_id IS NOT NULL";
+						using(IDataReader reader = dbcmd.ExecuteReader()) {
+							while(reader.Read()) {
+
+								string id = reader.GetString(0);
+								string storageId = reader.GetString(1);
+
+								// find the corresponding preview file
+								using(IDbCommand dbcmd2 = storageNewDbcon.CreateCommand()) {
+									dbcmd2.CommandText = "SELECT id,rev,storage_id FROM file WHERE storage_id=@storage ORDER BY position ASC LIMIT 1";
+									dbcmd2.Parameters.Add(new SqliteParameter("storage", storageId));
+									using(IDataReader reader2 = dbcmd2.ExecuteReader()) {
+										while(reader2.Read()) {
+											long fileId = reader2.GetInt64(0);
+											long fileRev = reader2.GetInt64(1);
+
+											// update resource
+											using(IDbCommand dbcmd3 = usersNewDbcon.CreateCommand()) {
+												dbcmd3.CommandText = 
+													"UPDATE resource SET preview_file_id=@file, preview_file_rev=@rev WHERE id=@id";
+												dbcmd3.Parameters.Add(new SqliteParameter("id", id));
+												dbcmd3.Parameters.Add(new SqliteParameter("file", fileId));
+												dbcmd3.Parameters.Add(new SqliteParameter("rev", fileRev));
+												dbcmd3.ExecuteNonQuery();
+											}
+
+										}
+									}
+								}
+							}
+						}
+					}
+
+					usersNewDbcon.Close();
+				}
+				storageNewDbcon.Close();
+			}
+		}
 
 		public static void Main(string[] args)
 		{
@@ -938,6 +1000,7 @@ namespace Migration
 			ConvertPathLog();
 			ConvertStorages();
 			ConvertUsers();
+			UpdateResourcesPreview();
 		}
 	}
 }
