@@ -52,7 +52,7 @@ Ui.Dialog.extend('Wn.ResourcePropertiesDialog', {
 			this.setActionButtons([ this.deleteButton, this.saveButton ]);
 		}
 		else {
-			hbox.disable();
+			this.nameField.disable();
 		}
 	},
 
