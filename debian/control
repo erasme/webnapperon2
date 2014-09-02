@@ -14,7 +14,7 @@ Description: Daemon for the WebNapperon 2 web services
  
 Package: webnapperon2-static
 Architecture: any
-Depends: ffmpegstatic, mediainfo, poppler-utils, phantomjs, imagemagick, unoconv, libreoffice
+Depends: ffmpegstatic, mediainfo, poppler-utils, phantomjs, imagemagick, unoconv, libreoffice, sqlite3, libsqlite3-dev
 Conflicts: webnapperon2
 Replaces: webnapperon2
 Description: Static Daemon for the WebNapperon 2 web services
