@@ -174,6 +174,8 @@ namespace Webnapperon2
 			ClientSetup.icons = Setup.icons;
 
 			AllowGZip = Setup.http.allowGZip;
+			KeepAliveMax = Setup.http.keepAliveMax;
+			KeepAliveTimeout = Setup.http.keepAliveTimeout;
 
 			// define the logger which handle logs
 			Logger = new FileLogger(Setup.server.log+"/webnapperon2.log");
@@ -222,7 +224,7 @@ namespace Webnapperon2
 					ClientSetup.authentication.services.Add(service);
 				}
 			}
-			mapper.Add(Setup.server.path+"/wallpaper/", new Webnapperon2.Wallpaper.WallpaperService(Setup.server["static"] + "/wallpaper/", Setup.http.defaultCacheDuration));
+			mapper.Add(Setup.server.path+"/wallpaper/", new Webnapperon2.Wallpaper.WallpaperService(Setup.server["static"] + "/wallpaper/", Setup.server.storage + "/wallpaper/", Setup.http.defaultCacheDuration));
 
 			// service for a client to get the server setup
 			mapper.Add(Setup.server.path + "/setup", new JsonContent(ClientSetup));
