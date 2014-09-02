@@ -200,8 +200,21 @@ Ui.LBox.extend('Wn.MenuContactIcon', {
 			this.statusRect.hide();
 //		this.statusRect.setFill(this.contact.getIsOnline()?'#13d774':'#d71354');
 		this.image.setSrc(this.contact.getFaceUrl());
-		this.onContactResourceChange();
+//		this.onContactResourceChange();
 	},
+
+	onUserMessagesChange: function() {
+		var messages = this.user.getMessages();
+		var hasNew = false;
+		for(var i = 0; !hasNew && (i < messages.length); i++) {
+			var message = messages[i];
+			hasNew = !message.getSeen() && (message.getOrigin() === this.contact.getId()) && (message.getType() === 'resource');
+		}
+		if(hasNew)
+			this.newicon.show();
+		else
+			this.newicon.hide();
+	}/*,
 
 	onContactResourceChange: function() {
 		// update the newicon
@@ -214,22 +227,26 @@ Ui.LBox.extend('Wn.MenuContactIcon', {
 			this.newicon.show();
 		else
 			this.newicon.hide();
-	}
+	}*/
 }, {
 	onLoad: function() {
 		Wn.MenuContactIcon.base.onLoad.call(this);
 
 		this.connect(this.contact, 'change', this.onContactChange);
-		this.connect(this.contact, 'resourcechange', this.onContactResourceChange);
+//		this.connect(this.contact, 'resourcechange', this.onContactResourceChange);
+		this.connect(this.user, 'messageschange', this.onUserMessagesChange);
+
 		if(this.contact.getIsReady())
 			this.onContactChange();
+		this.onUserMessagesChange();
 	},
 	
 	onUnload: function() {
 		Wn.MenuContactIcon.base.onUnload.call(this);
 		
 		this.disconnect(this.contact, 'change', this.onContactChange);
-		this.disconnect(this.contact, 'resourcechange', this.onContactResourceChange);
+//		this.disconnect(this.contact, 'resourcechange', this.onContactResourceChange);
+		this.disconnect(this.user, 'messageschange', this.onUserMessagesChange);
 	}
 });
 /*
@@ -601,10 +618,7 @@ Ui.LBox.extend('Wn.Menu', {
 		for(var i = 0; i < this.contacts.getLogicalChildren().length; i++) {
 			if(this.contacts.getLogicalChildren()[i].getContact().getId() == userId) {
 				this.contacts.getLogicalChildren()[i].setCurrent(true);
-				if('scrollIntoViewIfNeeded' in this.contacts.getLogicalChildren()[i].getDrawing())
-					this.contacts.getLogicalChildren()[i].getDrawing().scrollIntoViewIfNeeded();
-				else
-					this.contacts.getLogicalChildren()[i].getDrawing().scrollIntoView();
+				this.contacts.getLogicalChildren()[i].scrollIntoView();
 			}
 			else
 				this.contacts.getLogicalChildren()[i].setCurrent(false);
@@ -1686,8 +1700,8 @@ Ui.App.extend('Wn.App', {
 
 	setAutoPlay: function(autoPlay) {
 		localStorage.setItem('autoPlay', autoPlay?'true':'false');
-		if(autoPlay && ('play' in this.main))
-			this.main.play();
+		if('setAutoPlay' in this.main)
+			this.main.setAutoPlay(autoPlay === true);
 	},
 
 	onHashChange: function(event) {
@@ -1752,7 +1766,20 @@ Ui.App.extend('Wn.App', {
 			}
 		}
 	},
-	
+
+	getThemeWallpaper: function(themeName) {
+		var wallpaper;
+		for(var i = 0; i < this.setup.style.themes.length; i++) {
+			if(this.setup.style.themes[i].key === themeName) {
+				var theme = this.setup.style.themes[i];
+				if((theme.wallpaper !== undefined) && (theme.wallpaper !== null))
+					wallpaper = theme.wallpaper;
+				break;
+			}
+		}
+		return wallpaper;
+	},
+
 	setTheme: function(themeName) {
 		var theme;
 		// choose the user defined theme
@@ -1822,6 +1849,12 @@ Ui.App.extend('Wn.App', {
 				color: palette.foreground
 			},
 			"Ui.ScrollingArea": {
+				color: palette.foreground,
+				showScrollbar: false,
+				overScroll: true,
+				radius: theme.roundness
+			},
+			"Ui.VBoxScrollingArea": {
 				color: palette.foreground,
 				showScrollbar: false,
 				overScroll: true,
@@ -1919,9 +1952,8 @@ Ui.App.extend('Wn.App', {
 			"Ui.Slider": {
 				radius: theme.roundness,
 				borderWidth: theme.thickness,
-				background: 'rgba(250,250,250,0)',
-				backgroundBorder: palette.foreground,
-				foreground: palette.foreground
+				background: palette.foreground,
+				foreground: palette.focus
 			},
 			"Wn.ImprovedText": {
 				color: palette.foreground
@@ -2111,6 +2143,11 @@ Ui.App.extend('Wn.App', {
 					focusForeground: palette.menuInv,
 					activeBackground: palette.menuInv,
 					activeForeground: palette.menu
+				},
+				"Ui.TextBgGraphic": {
+					borderWidth: theme.thickness,
+					background: palette.menuInv,
+					focusBackground: palette.focus
 				}
 			},
 			"Ui.DialogCloseButton": {
@@ -2224,6 +2261,16 @@ Ui.App.extend('Wn.App', {
 						iconSize: 28,
 						spacing: 0
 					}
+				},
+				"Ui.SegmentBar": {
+					background: 'rgba(250,250,250,0)',
+					backgroundBorder: palette.menuInv,
+					foreground: palette.menuInv,
+					focusBackground: 'rgba(250,250,250,0)',
+					focusBackgroundBorder: palette.focus,
+					focusForeground: palette.menuInv,
+					activeBackground: palette.menuInv,
+					activeForeground: palette.menu
 				}
 			},
 			"Wn.MenuUser": {
@@ -2290,6 +2337,12 @@ Ui.App.extend('Wn.App', {
 				textWidth: 80,
 				iconSize: 64,
 				backgroundBorder: 'rgba(250,250,250,0)'
+			},
+			"Calendar.DayGraph": {
+				color: Ui.Color.create(palette.foreground).addA(-0.4)
+			},
+			"Calendar.WeekGraph": {
+				color: Ui.Color.create(palette.foreground).addA(-0.4)
 			},
 			"Wn.CommentView": {
 				orientation: 'horizontal',
