@@ -12,7 +12,7 @@ Core.Object.extend('Wn.Queue', {
 		this.channel = config.channel;
 		delete(config.channel);
 		
-		console.log('new Wn.Queue('+this.channel+')');
+		//console.log('new Wn.Queue('+this.channel+')');
 		
 		this.startMonitoring();
 	},
