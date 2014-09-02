@@ -109,10 +109,19 @@ namespace Webnapperon2.User
 			{
 				JsonValue json = JsonValue.Parse(message);
 				// handle watch resource message
-				if(json.ContainsKey("type") && (json["type"] == "watch") && json.ContainsKey("resource")) {
-					string resource = json["resource"];
-					// check the rights
-					EnsureCanReadResource(resource);
+				if(json.ContainsKey("type") && (json["type"] == "watch") && (json.ContainsKey("resource") || json.ContainsKey("user"))) {
+					string resource;
+
+					if(json.ContainsKey("resource")) {
+						resource = json["resource"];
+						// check the rights
+						EnsureCanReadResource(resource);
+					}
+					else {
+						resource = json["user"];
+						// check the rights
+						Service.EnsureCanReadShortUser(Context, resource, null);
+					}
 
 					lock(Service.instanceLock) {
 						if(currentResource != resource) {
@@ -494,7 +503,7 @@ namespace Webnapperon2.User
 				}
 			}
 			// if resource is public, add all users that has that owner in their contacts
-			if(isPublic) {
+/*			if(isPublic) {
 				List<string> contacts = GetUsersThatHasContact(dbcon, transaction, owner);
 				foreach(string contact in contacts)
 					if(!users.Contains(contact))
@@ -515,7 +524,7 @@ namespace Webnapperon2.User
 						reader.Close();
 					}
 				}
-			}
+			}*/
 			return users;
 		}
 		
@@ -949,7 +958,7 @@ namespace Webnapperon2.User
 					
 						using(IDataReader reader = dbcmd.ExecuteReader()) {
 							while(reader.Read()) {	
-								users.Add(GetUser(dbcon, transaction, reader.GetString(0), false, null));
+								users.Add(GetUser(dbcon, transaction, reader.GetString(0), false, null, false));
 							}
 							// clean up
 							reader.Close();
@@ -1778,7 +1787,7 @@ namespace Webnapperon2.User
 			JsonValue user;
 			lock(dbcon) {
 				using(IDbTransaction transaction = dbcon.BeginTransaction()) {
-					user = GetUser(dbcon, transaction, id, (filterUserId == null), filterUserId);
+					user = GetUser(dbcon, transaction, id, (filterUserId == null), filterUserId, true);
 					// commit the transaction
 					transaction.Commit();
 				}
@@ -1904,7 +1913,7 @@ namespace Webnapperon2.User
 			return user;
 		}
 
-		JsonValue GetUser(IDbConnection dbcon, IDbTransaction transaction, string id, bool full, string filterUserId)
+		JsonValue GetUser(IDbConnection dbcon, IDbTransaction transaction, string id, bool full, string filterUserId, bool resources)
 		{
 			//Console.WriteLine("GetUser "+id+" START");
 
@@ -2019,7 +2028,7 @@ namespace Webnapperon2.User
 						JsonArray contacts = new JsonArray();
 						user["contacts"] = contacts;
 						while(reader.Read()) {
-							JsonValue contact = GetUser(dbcon, transaction, reader.GetString(1), false, id);
+							JsonValue contact = GetUser(dbcon, transaction, reader.GetString(1), false, id, false);
 							contact["position"] = position++;
 							contacts.Add(contact);
 						}
@@ -2054,7 +2063,8 @@ namespace Webnapperon2.User
 			}
 			else {
 				//Console.WriteLine("GetUser "+id+" STEP4S "+((DateTime.UtcNow-startTime).TotalMilliseconds)+" ms");
-				user["resources"] = GetResources(dbcon, transaction, id, filterUserId);
+				if(resources)
+					user["resources"] = GetResources(dbcon, transaction, id, filterUserId);
 			}
 			//Console.WriteLine("GetUser "+id+" END "+((DateTime.UtcNow-startTime).TotalMilliseconds)+" ms");
 			return user;
@@ -3356,10 +3366,16 @@ namespace Webnapperon2.User
 				EnsureIsAdmin(context);
 		}
 
-		public void EnsureCanReadShortUser(HttpContext context, string userId)
+		public void EnsureCanReadShortUser(HttpContext context, string userId, string seenBy)
 		{
 			// need a logged user
 			EnsureIsAuthenticated(context);
+			// if seenBy is set
+			if(seenBy != null) {
+				// only the user himself or admins
+				if(context.User != seenBy)
+					EnsureIsAdmin(context);
+			}
 			// allowed to all logged users
 		}
 
@@ -3458,12 +3474,12 @@ namespace Webnapperon2.User
 			// GET /[user][?seenby=user] get the user
 			else if((context.Request.Method == "GET") && (parts.Length == 1) && IsValidId(parts[0])) {
 				string user = parts[0];
-				string seenby = null;
+				string seenBy = null;
 				// do we filter for a given user ?
-				if(context.Request.QueryString.ContainsKey("seenby")) {
-					seenby = context.Request.QueryString["seenby"];
+				if(context.Request.QueryString.ContainsKey("seenBy")) {
+					seenBy = context.Request.QueryString["seenBy"];
 					// test rights
-					EnsureCanReadShortUser(context, user);
+					EnsureCanReadShortUser(context, user, seenBy);
 				}
 				else {
 					// test rights
@@ -3471,7 +3487,7 @@ namespace Webnapperon2.User
 				}
 				context.Response.StatusCode = 200;
 				context.Response.Headers["cache-control"] = "no-cache, must-revalidate";
-				context.Response.Content = new JsonContent(GetUser(user, seenby));
+				context.Response.Content = new JsonContent(GetUser(user, seenBy));
 			}
 			// GET /[user]/face get the face
 			else if((context.Request.Method == "GET") && (parts.Length == 2) && IsValidId(parts[0]) && (parts[1] == "face")) {
