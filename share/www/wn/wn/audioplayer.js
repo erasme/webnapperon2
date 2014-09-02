@@ -5,11 +5,11 @@ Ui.CanvasElement.extend('Wn.PosButton', {}, {
 		var height = this.getLayoutHeight();
 		var radius = Math.min(width/2, height/2);
 
-		ctx.fillStyle = Ui.Color.create(this.getStyleProperty('backgroundBorder')).getCssRgba();
-		ctx.beginPath();
-		ctx.arc(width/2, height/2, radius, 0, Math.PI * 2, false);
-		ctx.closePath();
-		ctx.fill();
+//		ctx.fillStyle = Ui.Color.create(this.getStyleProperty('backgroundBorder')).getCssRgba();
+//		ctx.beginPath();
+//		ctx.arc(width/2, height/2, radius, 0, Math.PI * 2, false);
+//		ctx.closePath();
+//		ctx.fill();
 
 		ctx.fillStyle = Ui.Color.create(this.getStyleProperty('foreground')).getCssRgba();
 		ctx.beginPath();
@@ -110,7 +110,7 @@ Ui.CanvasElement.extend('Wn.PosBar', {
 	},
 
 	measureCore: function(width, height) {
-		return { width: 20, height: 10 };
+		return { width: 20, height: 7 };
 	},
 
 	onStyleChange: function() {
