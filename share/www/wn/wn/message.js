@@ -3,6 +3,7 @@ Core.Object.extend('Wn.Message', {
 	message: undefined,
 	ready: false,
 	request: undefined,
+	searchText: '',
 
 	constructor: function(config) {
 		this.addEvents('ready', 'change', 'delete');
@@ -37,11 +38,37 @@ Core.Object.extend('Wn.Message', {
 
 	updateData: function(values) {
 		this['message'] = values;
+		this.updateSearchText();
 		if(!this.ready) {
 			this.ready = true;
 			this.fireEvent('ready', this);
 		}
 		this.fireEvent('change', this);
+	},
+
+	updateSearchText: function() {
+		var createDate = this.getDate();
+		this.searchText = (createDate.getDate()-1)+'/'+(createDate.getMonth()+1)+'/'+createDate.getFullYear()+' ';
+
+		var contact;
+		if(this.message.origin === Ui.App.current.getUser().getId())
+			contact = Wn.Contact.getContact(this.message.destination, true);
+		else
+			contact = Wn.Contact.getContact(this.message.origin, true);
+		if(contact !== undefined)
+			this.searchText += contact.getName()+' ';
+
+		if(this.message.type === 'resource')
+			this.searchText += 'partage ressouce '+this.message.content.name;
+		else if(this.message.type === 'contact')
+			this.searchText += 'ajoute contact';
+		else if(this.message.type === 'comment')
+			this.searchText += 'commentaire ressource '+this.message.content.resource.name;
+		else if(this.message.type === 'call')
+			this.searchText += 'appel video';
+		else
+			this.searchText += this.message.content;
+		this.searchText = this.searchText.toLowerCase().toNoDiacritics();
 	},
 
 	getMessage: function() {
@@ -74,6 +101,10 @@ Core.Object.extend('Wn.Message', {
 
 	getContent: function() {
 		return this.message.content;
+	},
+
+	getSearchText: function() {
+		return this.searchText;
 	},
 
 	markSeen: function() {
