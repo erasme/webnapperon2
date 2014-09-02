@@ -211,7 +211,7 @@ Ui.Dialog.extend('Wn.CustomStyleEditor', {
 		"menu": "Bandeau",
         "menuInv": "Texte bandeau",
         "background": "Fond",
-        "foreground": "Fexte fond",
+        "foreground": "Texte fond",
         "focus": "Notifications",
         "focusInv": "Texte notification",
         "active": "Actif",
@@ -232,7 +232,7 @@ Ui.Button.extend('Wn.StyleWallpaper', {
 		this.wallpaper = config.wallpaper;
 		delete(config.wallpaper);
 
-		this.image = new Wn.ScaledImage2({ src: '/cloud/wallpaper/'+this.wallpaper, mode: 'crop' });
+		this.image = new Wn.ScaledImage2({ src: '/cloud/wallpaper/thumbnail/'+this.wallpaper, mode: 'crop' });
 		this.setIcon(this.image);
 	},
 
@@ -324,8 +324,11 @@ Wn.OptionSection.extend('Wn.StyleSection', {
 			dialog.open();
 		}
 		// else it is an administrator defined theme
-		else
+		else {
+			// clear the user defined wallpaper to allow the theme default one
+			this.user.setWallpaper(null);
 			Ui.App.current.setTheme(val.key);
+		}
 		this.user.setTheme(val.key);
 	},
 
