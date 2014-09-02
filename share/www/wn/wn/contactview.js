@@ -19,7 +19,10 @@ Ui.LBox.extend('Wn.ContactSharesView', {
 	onContactChange: function() {				
 		var resources = this.contact.getResources();
 
-		if(resources.length === 0) {
+		if(!this.contact.getIsResourcesLoaded()) {
+			this.setContent(new Ui.Text({ fontSize: 20, text: 'Chargement en cours...', margin: 20, textAlign: 'center', verticalAlign: 'center' }));
+		}
+		else if(resources.length === 0) {
 			this.setContent(new Ui.Text({ fontSize: 20, text: 'Ce contact ne partage pas de ressources avec vous', margin: 20, textAlign: 'center', verticalAlign: 'center' }));
 			this.shares = undefined;
 		}
@@ -132,6 +135,8 @@ Ui.LBox.extend('Wn.ContactView', {
 		var scroll = new Ui.ScrollingArea({ scrollHorizontal: false });
 		vbox.append(scroll, true);
 		scroll.setContent(new Wn.ContactSharesView({ user: this.user, contact: this.contact }), true);
+
+		this.user.watchContact(this.contact);
 	},
 
 	getTitle: function() {
