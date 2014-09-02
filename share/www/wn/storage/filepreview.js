@@ -114,8 +114,8 @@ Ui.Button.extend('Storage.FilePreview', {
 			this.setIcon(lbox);
 
 			//this.content.setContent(lbox);
-			lbox.append(new Ui.Rectangle({ fill: new Ui.Color({ r: 0.7, b: 0.7, g: 0.7 }) }));
-			lbox.append(new Ui.Rectangle({ fill: 'white', margin: 1 }));
+//			lbox.append(new Ui.Rectangle({ fill: new Ui.Color({ r: 0.7, b: 0.7, g: 0.7 }) }));
+//			lbox.append(new Ui.Rectangle({ fill: 'white', margin: 1 }));
 			this.image = new Storage.FilePreviewImage({
 				src: '/cloud/preview/'+this.storage+'/'+this.file.id+'?rev='+this.file.rev,
 				margin: 3, squareSize: this.getStyleProperty('iconSize')-6 });
