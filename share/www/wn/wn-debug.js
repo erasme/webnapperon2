@@ -28,7 +28,6 @@ Core.Util.include(appBase+'wn/flowdropbox.js');
 Core.Util.include(appBase+'wn/sflowdropbox.js');
 Core.Util.include(appBase+'wn/vdropbox.js');
 Core.Util.include(appBase+'wn/hdropbox.js');
-Core.Util.include(appBase+'wn/carousel.js');
 Core.Util.include(appBase+'wn/groupiconview.js');
 Core.Util.include(appBase+'wn/resource.js');
 Core.Util.include(appBase+'wn/userface.js');
