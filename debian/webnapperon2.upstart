@@ -1,5 +1,5 @@
 description "start and stop webnapperon2 service"
-version "2.3"
+version "3.0"
 author "Daniel Lacroix <dlacroix@erasme.org>"
 
 env LD_LIBRARY_PATH=/usr/lib/webnapperon2/

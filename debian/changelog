@@ -1,3 +1,9 @@
+webnapperon2 (3.0) trusty; urgency=low
+
+  * Release 3.0
+  
+ -- Daniel Lacroix <dlacroix@erasme.org>  Thu, 11 Sep 2014 14:07:00 +0200
+
 webnapperon2 (2.3) saucy; urgency=low
 
   * Release 2.3
