@@ -1522,7 +1522,10 @@ Ui.CarouselableLoader.extend('Storage.FileDataLoader', {
 	}
 });
 
-Ui.CarouselableLoader.extend('Storage.LoadingDataLoader', {}, {
+Ui.CarouselableLoader.extend('Storage.LoadingDataLoader', {
+	setShowDetails: function(isDetailsVisible) {
+	}
+}, {
 	getMin: function() {
 		return -1;
 	},
