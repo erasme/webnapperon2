@@ -1705,7 +1705,7 @@ Wn.ResourceViewer.extend('Storage.BaseViewer', {
 			current.deleteFile();
 	},
 	
-	addFile: function(file) {
+	/*addFile: function(file) {
 		var found = false;
 		var carouselStart = (this.canAddFile()?1:0);
 		for(var i = carouselStart; i < this.carousel.getLogicalChildren().length; i++) {
@@ -1729,7 +1729,7 @@ Wn.ResourceViewer.extend('Storage.BaseViewer', {
 			this.carousel.insertAt(viewer, carouselStart+file.position);
 			this.carousel.setCurrent(viewer);
 		}
-	},
+	},*/
 
 	addNavigation: function() {
 		if(this.navigation === undefined) {
@@ -2110,7 +2110,7 @@ Wn.ResourceViewer.extend('Storage.BaseViewer', {
 			request.setRequestHeader('Content-Type', 'application/json');
 			request.setContent(JSON.stringify({ name: textField.getValue(), mimetype: 'text/plain', position: 0 }));
 			this.connect(request, 'done', function() {
-				this.addFile(request.getResponseJSON());
+				//this.addFile(request.getResponseJSON());
 				dialog.close();
 			});
 			this.connect(request, 'error', function() {
@@ -2181,7 +2181,7 @@ Wn.ResourceViewer.extend('Storage.BaseViewer', {
 				'--'+boundary+'--\r\n'
 			);
 			this.connect(request, 'done', function() {
-				this.addFile(request.getResponseJSON());
+				//this.addFile(request.getResponseJSON());
 				dialog.close();
 			});
 			this.connect(request, 'error', function() {
