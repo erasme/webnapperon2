@@ -195,16 +195,22 @@ Ui.DropBox.extend('Wn.ResourceViewer', {
 			this.contextBox.show();
 			this.actionBox.hide();
 		}
+	},
+
+	onResourceDelete: function() {
+		Ui.App.current.setDefaultMain();
 	}
 
 }, {
 	onLoad: function() {
 		Wn.ResourceViewer.base.onLoad.call(this);
 		this.connect(this.resource, 'change', this.onResourceChange);
+		this.connect(this.resource, 'delete', this.onResourceDelete);
 	},
 	
 	onUnload: function() {
 		Wn.ResourceViewer.base.onUnload.call(this);
+		this.disconnect(this.resource, 'delete', this.onResourceDelete);
 		this.disconnect(this.resource, 'change', this.onResourceChange);
 	}
 }, {
