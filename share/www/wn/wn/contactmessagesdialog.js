@@ -218,7 +218,8 @@ Ui.Pressable.extend('Wn.UserMessageView', {
 		if(this.showDestination)
 			hbox.append(lbox);
 		
-		this.setLock((this.message.getType() !== 'contact') && (this.message.getType() !== 'resource') && (this.message.getType() !== 'comment'));
+		this.setLock((this.message.getType() !== 'contact') && (this.message.getType() !== 'resource') &&
+			(this.message.getType() !== 'comment') && (this.message.getType() === 'message') && (Ui.Dialog.hasInstance(this.dialog)));
 
 		this.connect(this, 'press', this.onMessageViewPress);
 		
@@ -277,7 +278,12 @@ Ui.Pressable.extend('Wn.UserMessageView', {
 	onMessageViewPress: function() {
 		this.message.markSeen();
 		if(this.message.getType() == 'message') {
-			var dialog = new Wn.ContactMessagesDialog({ user: this.user, contact: this.source });
+			var contact;
+			if(this.message.getOrigin() === this.user.getId())
+				contact = this.destination;
+			else
+				contact = this.source;
+			var dialog = new Wn.ContactMessagesDialog({ user: this.user, contact: contact });
 			dialog.open();
 		}
 		else if(this.message.getType() == 'resource') {
