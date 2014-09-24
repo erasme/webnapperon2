@@ -214,16 +214,15 @@ Ui.CanvasElement.extend('Wn.PlayButton', {
 			this.mode = mode;
 			this.invalidateDraw();
 			if(mode == 'load') {
-				this.clock = new Anim.Clock({ duration: 'forever', scope: this,
-					onTimeupdate: function(clock, progress) {
-						this.invalidateDraw();
-					}
+				this.clock = new Anim.Clock({ duration: 'forever' });
+				this.connect(this.clock, 'timeupdate', function(clock, progress) {
+					this.invalidateDraw();
 				});
 				if(this.getIsVisible())
 					this.clock.begin();
 			}
 			else {
-				if(this.clock != undefined) {
+				if(this.clock !== undefined) {
 					this.clock.stop();
 					this.clock = undefined;
 				}
