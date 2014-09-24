@@ -27,10 +27,9 @@ Ui.LBox.extend('Wn.Error', {
 }, {
 	onLoad: function() {
 		Wn.Error.base.onLoad.apply(this, arguments);
-		this.clock = new Anim.Clock({ duration: 5.0, scope: this,
-			onTimeupdate: function(clock, progress) {
-				this.progressbar.setValue(1-progress);
-			}
+		this.clock = new Anim.Clock({ duration: 5.0 });
+		this.connect(this.clock, 'timeupdate', function(clock, progress) {
+			this.progressbar.setValue(1-progress);
 		});
 		this.connect(this.clock, 'complete', this.onProgressComplete);
 		this.clock.begin();
