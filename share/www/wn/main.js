@@ -1384,9 +1384,9 @@ Ui.App.extend('Wn.App', {
 							if((json !== undefined) && (json.path !== undefined)) {
 								Ui.App.current.setMainPath(json.path);
 								// auto play the content when RFID is used
-								var main = this.getMain();
-								if('play' in main)
-									main.play();
+//								var main = this.getMain();
+//								if('play' in main)
+//									main.play();
 							}
 						});
 						this.connect(request, 'error', function() {
@@ -1397,9 +1397,9 @@ Ui.App.extend('Wn.App', {
 					else {
 						this.setMainPath(rfidPath);
 						// auto play the content when RFID is used
-						var main = this.getMain();
-						if('play' in main)
-							main.play();
+//						var main = this.getMain();
+//						if('play' in main)
+//							main.play();
 					}
 					return;
 				case 'user':
