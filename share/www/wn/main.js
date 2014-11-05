@@ -1161,6 +1161,8 @@ Ui.App.extend('Wn.App', {
 	},
 
 	onGetUserError: function(req) {
+		if('localStorage' in window)
+			localStorage.removeItem('authsession');
 		this.basicLogin();
 	},
 
