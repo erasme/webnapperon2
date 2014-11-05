@@ -3253,7 +3253,7 @@ namespace Webnapperon2.User
 		
 		public void SetUserFaceFromUrl(string user, string url) 
 		{
-			string tmpFile = temporaryDirectory+"/"+Guid.NewGuid().ToString();
+			string tmpFile = Path.Combine(temporaryDirectory, Guid.NewGuid().ToString());
 			using(FileStream fileStream = File.Create(tmpFile)) {
 				// download the image
 				using(WebRequest request = new WebRequest(url, allowAutoRedirect: true)) {
@@ -3534,7 +3534,7 @@ namespace Webnapperon2.User
 					while((part = reader.ReadPart()) != null) {
 						// the file content
 						if(part.Headers.ContentDisposition["name"] == "file") {
-							faceFile = temporaryDirectory+"/"+Guid.NewGuid().ToString();
+							faceFile = Path.Combine(temporaryDirectory, Guid.NewGuid().ToString());
 							using(FileStream fileStream = new FileStream(faceFile, FileMode.CreateNew, FileAccess.Write)) {
 								part.Stream.CopyTo(fileStream);
 							}
@@ -3542,7 +3542,7 @@ namespace Webnapperon2.User
 					}
 				}
 				else {
-					faceFile = temporaryDirectory+"/"+Guid.NewGuid().ToString();
+					faceFile = Path.Combine(temporaryDirectory, Guid.NewGuid().ToString());
 					using(FileStream fileStream = new FileStream(faceFile, FileMode.CreateNew, FileAccess.Write)) {
 						context.Request.InputStream.CopyTo(fileStream);
 					}
