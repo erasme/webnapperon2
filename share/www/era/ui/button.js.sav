@@ -1,0 +1,213 @@
+Ui.Pressable.extend('Ui.Button', 
+/** @lends Ui.Button# */
+{
+	graphic: undefined,
+	dropbox: undefined,
+	isActive: false,
+
+    /**
+     * @constructs
+	 * @class A Button is a pressable element that looks like a rounded rectangle (by default) with some text and/or icon.        
+     * @extends Ui.Pressable
+     * @param {String} [config.text] Button's text
+     * @param {String} [config.icon] SVG Icon name
+     * @param {String} [config.orientation] 'vertical' or 'horizontal'
+	 * @param {mixed} [config] see {@link Ui.Pressable} constructor for more options.  
+     * @see <a href="http://daniel.erasme.lan:8080/era/samples/button/">Button sample</a>.
+     */ 
+	constructor: function(config) {
+		this.dropbox = new Ui.DropBox();
+		this.append(this.dropbox);
+
+		this.graphic = new Ui.ButtonGraphic();
+		this.dropbox.setContent(this.graphic);
+
+		this.connect(this, 'down', this.updateColors);
+		this.connect(this, 'up', this.updateColors);
+		this.connect(this, 'focus', this.updateColors);
+		this.connect(this, 'blur', this.updateColors);
+	},
+
+	getDropBox: function() {
+		return this.dropbox;
+	},
+
+	getGraphic: function() {
+		return this.graphic;
+	},
+
+	getText: function() {
+		return this.graphic.getText();
+	},
+
+	setText: function(text) {
+		this.graphic.setText(text);
+	},
+
+	getIcon: function() {
+		return this.graphic.getIcon();
+	},
+
+	setIcon: function(icon) {
+		this.graphic.setIcon(icon);
+	},
+
+	getIsActive: function() {
+		return this.isActive;
+	},
+
+	setIsActive: function(isActive) {
+		if(this.isActive !== isActive) {
+			this.isActive = isActive;
+			this.updateColors();
+		}
+	},
+
+	getBadge: function() {
+		return this.graphic.getBadge();
+	},
+
+	setBadge: function(text) {
+		this.graphic.setBadge(text);
+	},
+
+    /** @return {String} Orientation */
+	getOrientation: function() {
+		return this.graphic.getOrientation();
+	},
+    
+    /** @param {String} orientation can be 'vertical' or 'horizontal' */
+	setOrientation: function(orientation) {
+		this.graphic.setOrientation(orientation);
+	},
+
+	onButtonFocus: function() {
+		// only display the focus if no given by a mouse click
+		this.graphic.setHasFocus(!this.getIsMouseFocus());
+	},
+	
+	onButtonBlur: function() {
+		this.graphic.setHasFocus(false);
+	},
+
+	getBackground: function() {
+		var color;
+		if(this.isActive) {
+			if(this.getHasFocus() && !this.getIsMouseFocus())
+				color = Ui.Color.create(this.getStyleProperty('focusActiveBackground'));
+			else
+				color = Ui.Color.create(this.getStyleProperty('activeBackground'));
+		}
+		else {
+			if(this.getHasFocus() && !this.getIsMouseFocus())
+				color = Ui.Color.create(this.getStyleProperty('focusBackground'));
+			else
+				color = Ui.Color.create(this.getStyleProperty('background'));
+		}
+		var yuv = color.getYuva();
+		var deltaY = 0;
+		if(this.getIsDown())
+			deltaY = -0.20;
+		if(yuv.y < 0.4)
+			return new Ui.Color({ y: yuv.y + deltaY, u: yuv.u, v: yuv.v, a: yuv.a });
+		else
+			return new Ui.Color({ y: yuv.y + deltaY, u: yuv.u, v: yuv.v, a: yuv.a });
+	},
+
+	getBackgroundBorder: function() {
+		var color;
+		if(this.isActive) {
+			if(this.getHasFocus() && !this.getIsMouseFocus())
+				color = Ui.Color.create(this.getStyleProperty('focusActiveBackgroundBorder'));
+			else
+				color = Ui.Color.create(this.getStyleProperty('activeBackgroundBorder'));
+		}
+		else {
+			if(this.getHasFocus() && !this.getIsMouseFocus())
+				color = Ui.Color.create(this.getStyleProperty('focusBackgroundBorder'));
+			else
+				color = Ui.Color.create(this.getStyleProperty('backgroundBorder'));
+		}
+		var yuv = color.getYuva();
+		var deltaY = 0;
+		if(this.getIsDown())
+			deltaY = -0.20;
+		return new Ui.Color({ y: yuv.y + deltaY, u: yuv.u, v: yuv.v, a: yuv.a });
+	},
+
+	getForeground: function() {
+		var color;
+		if(this.isActive) {
+			if(this.getHasFocus() && !this.getIsMouseFocus())
+				color = Ui.Color.create(this.getStyleProperty('focusActiveForeground'));
+			else
+				color = Ui.Color.create(this.getStyleProperty('activeForeground'));
+		}
+		else {
+			if(this.getHasFocus() && !this.getIsMouseFocus())
+				color = Ui.Color.create(this.getStyleProperty('focusForeground'));
+			else
+				color = Ui.Color.create(this.getStyleProperty('foreground'));
+		}
+		var deltaY = 0;
+		if(this.getIsDown())
+			deltaY = 0.20;
+		var yuv = color.getYuva();
+		if(yuv.y < 0.4)
+			return new Ui.Color({ y: yuv.y + deltaY, u: yuv.u, v: yuv.v, a: yuv.a });
+		else
+			return new Ui.Color({ y: yuv.y - deltaY, u: yuv.u, v: yuv.v, a: yuv.a });
+	},
+
+	updateColors: function() {
+		this.graphic.setBackground(this.getBackground());
+		this.graphic.setBackgroundBorder(this.getBackgroundBorder());
+		this.graphic.setForeground(this.getForeground());
+	}
+}, {
+	onStyleChange: function() {
+		this.graphic.setSpacing(Math.max(0, this.getStyleProperty('spacing')));
+		this.graphic.setIconSize(Math.max(0, this.getStyleProperty('iconSize')));
+		this.graphic.setFontFamily(this.getStyleProperty('fontFamily'));
+		this.graphic.setFontSize(Math.max(0, this.getStyleProperty('fontSize')));
+		this.graphic.setFontWeight(this.getStyleProperty('fontWeight'));
+		this.graphic.setBorderWidth(this.getStyleProperty('borderWidth'));
+		this.graphic.setRadius(this.getStyleProperty('radius'));
+		this.graphic.setShowText(this.getStyleProperty('showText'));
+		this.graphic.setShowIcon(this.getStyleProperty('showIcon'));
+		this.graphic.setTextWidth(this.getStyleProperty('textWidth'));
+		this.updateColors();
+	}
+}, {
+	style: {
+		orientation: 'horizontal',
+		borderWidth: 1,
+		badgeColor: 'red',
+		badgeTextColor: 'white',
+		background: 'rgba(250,250,250,1)',
+		backgroundBorder: 'rgba(140,140,140,1)',
+		foreground: '#444444',
+		activeBackground: 'rgba(250,250,250,1)',
+		activeBackgroundBorder: 'rgba(140,140,140,1)',
+		activeForeground: 'rgb(33,211,255)',
+		focusBackground: 'rgb(33,211,255)',
+		focusBackgroundBorder: new Ui.Color({ r: 0.04, g: 0.43, b: 0.5 }),
+		focusForeground: '#222222',
+		focusActiveBackground: 'rgb(33,211,255)',
+		focusActiveBackgroundBorder: new Ui.Color({ r: 0.04, g: 0.43, b: 0.5 }),
+		focusActiveForeground: 'white',
+		radius: 3,
+		spacing: 5,
+		iconSize: 24,
+		fontSize: 16,
+		fontFamily: 'Sans-serif',
+		fontWeight: 'normal',
+		textWidth: 0,
+		showText: true,
+		showIcon: true
+	}
+});
+
+Ui.Button.extend('Ui.DefaultButton', {});
+
+
